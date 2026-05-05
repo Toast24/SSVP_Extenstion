@@ -1,3 +1,8 @@
+# DEPRECATED: Moved to _deprecated/
+# Reason: [pruning/distillation failed — see technical report §3, Table 3]
+# Original location: 03_code/scripts/_deprecated/run_head_sanity_tests.py
+# Preserved for negative-results documentation in paper §5.7.
+
 """
 Run a 3-epoch head-only sanity suite for pruning/LoRA variants.
 

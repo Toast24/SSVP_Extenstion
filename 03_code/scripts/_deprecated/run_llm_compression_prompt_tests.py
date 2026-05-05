@@ -1,3 +1,8 @@
+# DEPRECATED: Moved to _deprecated/
+# Reason: [pruning/distillation failed — see technical report §3, Table 3]
+# Original location: 03_code/scripts/_deprecated/run_llm_compression_prompt_tests.py
+# Preserved for negative-results documentation in paper §5.7.
+
 """
 Run fast caption-side LLM experiments on an existing checkpoint.
 

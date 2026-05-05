@@ -1,3 +1,8 @@
+# DEPRECATED: Moved to _deprecated/
+# Reason: [pruning/distillation failed — see technical report §3, Table 3]
+# Original location: 03_code/scripts/_deprecated/run_staged_distillation.py
+# Preserved for negative-results documentation in paper §5.7.
+
 """
 Run staged student compression:
 1) Train/evaluate 53M distilled student.

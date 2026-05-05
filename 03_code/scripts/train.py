@@ -255,6 +255,8 @@ def derive_validation_thresholds(model, val_loader, device, config):
     }
 
 
+# These remain for backward compat but are inactive under default.yaml
+# (training.distillation.enabled = false)
 def setup_distillation_teacher(config, device):
     """Optional teacher model setup for knowledge distillation."""
     train_cfg = config.get("training", {})

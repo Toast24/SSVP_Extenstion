@@ -1,3 +1,8 @@
+# DEPRECATED: Moved to _deprecated/
+# Reason: [pruning/distillation failed — see technical report §3, Table 3]
+# Original location: 03_code/configs/_deprecated/ssvp_student_53m_distill.yaml
+# Preserved for negative-results documentation in paper §5.7.
+
 # SSVP student config (~53M trainable) distilled from run21 baseline
 
 backbone:
