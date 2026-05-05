@@ -89,7 +89,10 @@ def main():
     parser.add_argument("--config", type=str, default=default_config_path())
     parser.add_argument("--data_root", type=str, default=None)
     parser.add_argument("--output_root", type=str, default=str(ABLATIONS_DIR / "ablation_matrix"))
-    parser.add_argument("--epochs", type=int, default=3)
+    parser.add_argument("--epochs", type=int, default=15,
+                        help="Training epochs per variant (default: 15 for controlled comparison)")
+    parser.add_argument("--match_baseline_epochs", action="store_true",
+                        help="Read epoch count from base config instead of --epochs")
     parser.add_argument("--num_vis_samples", type=int, default=5)
     parser.add_argument("--skip_existing", action="store_true")
     parser.add_argument(
@@ -186,7 +189,8 @@ def main():
 
         temp_cfg = copy.deepcopy(base_cfg)
         deep_update(temp_cfg, variant["overrides"])
-        temp_cfg["training"]["epochs"] = int(args.epochs)
+        if not args.match_baseline_epochs:
+            temp_cfg["training"]["epochs"] = int(args.epochs)
 
         temp_cfg_path = run_dir / "_ablation_config.yaml"
         with open(temp_cfg_path, "w", encoding="utf-8") as f:

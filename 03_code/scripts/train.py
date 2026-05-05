@@ -684,6 +684,17 @@ def main():
         source_categories=args.categories,
         seed=args.seed,
     )
+    from data.mvtec import log_dataset_statistics
+    train_stats = log_dataset_statistics(train_loader.dataset, "Train Split")
+    val_stats = log_dataset_statistics(val_loader.dataset, "Validation Split")
+
+    # Save to output_dir for P-PRO diagnostics
+    import json
+    stats_path = os.path.join(args.output_dir, "dataset_statistics.json")
+    os.makedirs(args.output_dir, exist_ok=True)
+    with open(stats_path, "w") as f:
+        json.dump({"train": train_stats, "val": val_stats}, f, indent=2)
+
     print(f"Training samples: {len(train_loader.dataset)}")
     print(f"Validation samples (from train split): {len(val_loader.dataset)}")
 
@@ -847,6 +858,12 @@ def main():
     summary = {
         "best_val_loss": float(best_val_loss),
         "epochs_completed": len(metrics_history),
+        "dataset_statistics": {
+            "train_samples": len(train_loader.dataset),
+            "val_samples": len(val_loader.dataset),
+            "train_stats": train_stats,
+            "val_stats": val_stats,
+        },
         "early_stopping_enabled": es_enabled,
         "early_stopping_patience": es_patience,
         "monitor": "val_loss",

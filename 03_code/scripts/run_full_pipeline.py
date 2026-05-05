@@ -442,10 +442,89 @@ def sample_and_save_visuals(
     print(f"Saved {len(meta)} visualizations + captions to: {vis_dir}")
 
 
+    os.makedirs(cat_output, exist_ok=True)
+
+    # 1) Train
+    if not args.skip_train:
+        train_cmd = [sys.executable, TRAIN_SCRIPT, "--config", config_for_run, "--output_dir", cat_output]
+        if cat_data:
+            train_cmd += ["--data_root", cat_data]
+            train_cmd += ["--categories", category]
+        if args.resume:
+            train_cmd += ["--resume", args.resume]
+        run_subprocess(train_cmd)
+    else:
+        print("Skipping training as requested (--skip_train).")
+
+    # 2) Resolve checkpoint
+    if args.checkpoint:
+        ckpt = Path(args.checkpoint)
+    else:
+        ckpt = Path(cat_output) / "best_model.pth"
+        if not ckpt.exists():
+            candidates = list(Path(cat_output).glob("checkpoint_epoch*.pth"))
+            if candidates:
+                ckpt = sorted(candidates)[-1]
+
+    if not ckpt.exists():
+        print(f"No checkpoint found for category {category}. Skipping evaluation.")
+        return
+
+    # 3) Evaluate via inference.py + noise robustness (optional)
+    if not args.skip_eval:
+        eval_dir = Path(cat_output) / "eval_results"
+        eval_dir.mkdir(parents=True, exist_ok=True)
+        eval_cmd = [sys.executable, INFERENCE_SCRIPT, "--config", config_for_run, "--checkpoint", str(ckpt), "--output_dir", str(eval_dir), "--visualize"]
+        calibration_file = Path(cat_output) / "calibration_thresholds.json"
+        if calibration_file.exists():
+            eval_cmd += ["--calibration_file", str(calibration_file)]
+        if cat_data:
+            eval_cmd += ["--data_root", cat_data]
+            eval_cmd += ["--categories", category]
+        run_subprocess(eval_cmd)
+
+        # 3b) Robustness benchmark on heavily noised test images
+        noise_eval_dir = Path(cat_output) / "noise_eval"
+        noise_cmd = [
+            sys.executable,
+            NOISE_EVAL_SCRIPT,
+            "--config", config_for_run,
+            "--checkpoint", str(ckpt),
+            "--output_dir", str(noise_eval_dir),
+            "--clean_results", str(eval_dir / "results.json"),
+        ]
+        if calibration_file.exists():
+            noise_cmd += ["--calibration_file", str(calibration_file)]
+
+        if cat_data:
+            noise_cmd += ["--data_root", cat_data]
+            noise_cmd += ["--categories", category]
+
+        run_subprocess(noise_cmd)
+
+    # 4) Sample random test images, generate captions + visualizations
+    sample_and_save_visuals(
+        str(ckpt), config_for_run, cat_data, cat_output,
+        num_samples=args.num_vis_samples,
+        force_caption_finetune=args.caption_finetune,
+        force_caption_int8=args.caption_text_int8,
+        categories=[category]
+    )
+
+
+def _write_aggregated_report(aggregated_results, output_dir):
+    report_path = Path(output_dir) / "aggregated_results.json"
+    with open(report_path, "w", encoding="utf-8") as f:
+        json.dump(aggregated_results, f, indent=2)
+    print(f"\nSaved aggregated cross-category report to: {report_path}")
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", type=str, default=default_config_path())
     parser.add_argument("--data_root", type=str, default=None)
+    parser.add_argument("--categories", nargs="+", default=None,
+                        help="Categories to run sequentially (e.g., cable bottle leather)")
     parser.add_argument("--output_dir", type=str, default=str(LOGS_DIR / "run_full_pipeline"))
     parser.add_argument("--checkpoint", type=str, default=None,
                         help="Optional checkpoint path to use when --skip_train is set")
@@ -477,87 +556,48 @@ def main():
             yaml.safe_dump(cfg, f, sort_keys=False)
         config_for_run = str(temp_cfg_path)
 
-    # 1) Train
-    if not args.skip_train:
-        train_cmd = [sys.executable, TRAIN_SCRIPT, "--config", config_for_run, "--output_dir", output_dir]
-        if args.data_root:
-            dr = Path(args.data_root)
-            # If user pointed to a category directory (e.g., ./cable/), pass its parent as data_root and the folder name as category
-            if (dr / "train").is_dir() or (dr / "test").is_dir():
-                train_cmd += ["--data_root", str(dr.parent)]
-                train_cmd += ["--categories", dr.name]
-            else:
-                train_cmd += ["--data_root", args.data_root]
-        if args.resume:
-            train_cmd += ["--resume", args.resume]
-        # Allow user to override epochs via env var or pass-through config
-        run_subprocess(train_cmd)
+    # Main execution loop
+    if args.categories and len(args.categories) > 1:
+        aggregated_results = {}
+        for category in args.categories:
+            cat_output = str(Path(args.output_dir) / category)
+            # if user points to parent datasets directory, data_root should just be that
+            cat_data = args.data_root
+            if args.data_root:
+                dr = Path(args.data_root)
+                if dr.name == category: # User passed a specific category folder but specified multiple categories - this is weird
+                    cat_data = str(dr.parent)
+                elif (dr / category).is_dir():
+                    cat_data = str(dr)
+                else: # Fallback to user provided
+                    cat_data = args.data_root
+
+            print(f"\n{'='*60}")
+            print(f"  Running category: {category}")
+            print(f"{'='*60}")
+            
+            _run_single_category(args, category, cat_output, cat_data, config_for_run)
+            
+            # Collect results
+            results_path = Path(cat_output) / "eval_results" / "results.json"
+            if results_path.exists():
+                with open(results_path) as f:
+                    aggregated_results[category] = json.load(f)
+
+        # Write aggregated cross-category report
+        _write_aggregated_report(aggregated_results, args.output_dir)
     else:
-        print("Skipping training as requested (--skip_train).")
-
-    # 2) Resolve checkpoint
-    if args.checkpoint:
-        ckpt = Path(args.checkpoint)
-    else:
-        ckpt = Path(output_dir) / "best_model.pth"
-        if not ckpt.exists():
-            # try checkpoint_epoch*.pth fallback
-            candidates = list(Path(output_dir).glob("checkpoint_epoch*.pth"))
-            if candidates:
-                ckpt = sorted(candidates)[-1]
-
-    if not ckpt.exists():
-        print("No checkpoint found. Provide --checkpoint or ensure output_dir contains saved checkpoints.")
-        sys.exit(1)
-
-    # 3) Evaluate via inference.py + noise robustness (optional)
-    if not args.skip_eval:
-        eval_dir = Path(output_dir) / "eval_results"
-        eval_dir.mkdir(parents=True, exist_ok=True)
-        eval_cmd = [sys.executable, INFERENCE_SCRIPT, "--config", config_for_run, "--checkpoint", str(ckpt), "--output_dir", str(eval_dir), "--visualize"]
-        calibration_file = Path(output_dir) / "calibration_thresholds.json"
-        if calibration_file.exists():
-            eval_cmd += ["--calibration_file", str(calibration_file)]
-        if args.data_root:
-            dr = Path(args.data_root)
-            if (dr / "train").is_dir() or (dr / "test").is_dir():
-                eval_cmd += ["--data_root", str(dr.parent)]
-                eval_cmd += ["--categories", dr.name]
-            else:
-                eval_cmd += ["--data_root", args.data_root]
-        run_subprocess(eval_cmd)
-
-        # 3b) Robustness benchmark on heavily noised test images
-        noise_eval_dir = Path(output_dir) / "noise_eval"
-        noise_cmd = [
-            sys.executable,
-            NOISE_EVAL_SCRIPT,
-            "--config", config_for_run,
-            "--checkpoint", str(ckpt),
-            "--output_dir", str(noise_eval_dir),
-            "--clean_results", str(eval_dir / "results.json"),
-        ]
-        if calibration_file.exists():
-            noise_cmd += ["--calibration_file", str(calibration_file)]
-
-        if args.data_root:
-            dr = Path(args.data_root)
-            if (dr / "train").is_dir() or (dr / "test").is_dir():
-                noise_cmd += ["--data_root", str(dr.parent)]
-                noise_cmd += ["--categories", dr.name]
-            else:
-                noise_cmd += ["--data_root", args.data_root]
-
-        run_subprocess(noise_cmd)
-
-    # 4) Sample random test images, generate captions + visualizations
-    sample_and_save_visuals(
-        str(ckpt), config_for_run, args.data_root, output_dir,
-        num_samples=args.num_vis_samples,
-        force_caption_finetune=args.caption_finetune,
-        force_caption_int8=args.caption_text_int8,
-    )
-
+        # Single-category path (existing behavior)
+        category = args.categories[0] if args.categories else None
+        dr = Path(args.data_root) if args.data_root else None
+        
+        cat_data = args.data_root
+        if dr and ((dr / "train").is_dir() or (dr / "test").is_dir()):
+            cat_data = str(dr.parent)
+            if not category:
+                category = dr.name
+        
+        _run_single_category(args, category, output_dir, cat_data, config_for_run)
 
 if __name__ == "__main__":
     main()
