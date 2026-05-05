@@ -1,15 +1,15 @@
 """
-Prepare randomized 70:20:10 train/test/val splits for the cable dataset.
+Prepare randomized 70:20:10 train/test/val splits for any MVTec AD category.
 
-Input layout:
-    04_data/datasets/cable/
+Input layout (e.g., for cable):
+    04_data/datasets/<category>/
       train/good/
       test/good/
       test/<defect_type>/
       ground_truth/<defect_type>/
 
 Output layout:
-    04_data/datasets/cable_resplit/cable/
+    04_data/datasets/<category>_resplit/<category>/
       train/<defect_type>/
       test/<defect_type>/
       val/<defect_type>/

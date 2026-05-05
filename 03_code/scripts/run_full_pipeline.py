@@ -442,6 +442,8 @@ def sample_and_save_visuals(
     print(f"Saved {len(meta)} visualizations + captions to: {vis_dir}")
 
 
+def _run_single_category(args, category, cat_output, cat_data, config_for_run):
+    """Run the full pipeline (train + eval + noise + captions) for a single category."""
     os.makedirs(cat_output, exist_ok=True)
 
     # 1) Train
