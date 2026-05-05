@@ -334,3 +334,37 @@ def get_mvtec_train_val_dataloaders(config, source_categories=None, val_ratio=No
     )
 
     return train_loader, val_loader
+
+
+def log_dataset_statistics(dataset, split_name="dataset"):
+    """Log sample counts per category and defect type for P-PRO diagnostics."""
+    from collections import Counter
+    # If using Subset, extract underlying samples
+    if isinstance(dataset, torch.utils.data.Subset):
+        samples = [dataset.dataset.samples[i] for i in dataset.indices]
+    else:
+        samples = dataset.samples
+
+    cat_counts = Counter(s["category"] for s in samples)
+    defect_counts = Counter(
+        (s["category"], s["defect_type"]) for s in samples
+    )
+    label_counts = Counter(s["label"] for s in samples)
+
+    print(f"\n{'='*50}")
+    print(f"  Dataset Statistics: {split_name}")
+    print(f"  Total samples: {len(samples)}")
+    print(f"  Normal: {label_counts.get(0, 0)} | Anomalous: {label_counts.get(1, 0)}")
+    print(f"{'='*50}")
+    for cat, count in sorted(cat_counts.items()):
+        print(f"  {cat}: {count} samples")
+        for (c, d), dc in sorted(defect_counts.items()):
+            if c == cat:
+                print(f"    └─ {d}: {dc}")
+    print(f"{'='*50}\n")
+    return {
+        "total": len(samples),
+        "normal": label_counts.get(0, 0),
+        "anomalous": label_counts.get(1, 0),
+        "per_category": dict(cat_counts),
+    }

@@ -78,7 +78,11 @@ def copy_sample(image_path: Path, dest_img_dir: Path):
 
 def main():
     parser = argparse.ArgumentParser(description="Resplit cable data into 70/20/10 train/test/val")
-    parser.add_argument("--source", type=str, default=str(DATASETS_DIR / "cable"), help="Source cable dataset directory")
+    parser.add_argument("--source", type=str,
+                        default=str(DATASETS_DIR / "cable"),
+                        help="Source dataset directory (e.g., 04_data/datasets/cable)")
+    parser.add_argument("--category", type=str, default="cable",
+                        help="MVTec AD category name (e.g., cable, bottle, leather)")
     parser.add_argument(
         "--output_root",
         type=str,
@@ -94,7 +98,7 @@ def main():
     if not source.is_dir():
         raise FileNotFoundError(f"Source path not found: {source}")
 
-    out_category = Path(args.output_root) / "cable"
+    out_category = Path(args.output_root) / args.category
     if out_category.exists():
         shutil.rmtree(out_category)
 
