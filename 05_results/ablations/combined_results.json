@@ -1,0 +1,257 @@
+{
+  "run21_resplit_15es": {
+    "clean": {
+      "path": "c:/Users/kedar/SSVP/ssvp/05_results/ablations/run21_resplit_15es/eval_results/results.json",
+      "results": {
+        "per_category": {
+          "cable": {
+            "image_level": {
+              "auroc": 97.42063492063492,
+              "f1_max": 84.84848435261708,
+              "ap": 93.61511539143119
+            },
+            "pixel_level": {
+              "auroc": 95.33689776120521,
+              "pro": 29.535681104290955,
+              "ap": 50.88694692577435
+            },
+            "n_samples": 74,
+            "n_anomalous": 18
+          }
+        },
+        "overall": {
+          "image_level": {
+            "auroc": 97.42063492063492,
+            "f1_max": 84.84848435261708,
+            "ap": 93.61511539143119
+          },
+          "pixel_level": {
+            "auroc": 95.33689776120521,
+            "pro": 29.535681104290955,
+            "ap": 50.88694692577435
+          },
+          "n_samples": 74
+        }
+      }
+      
+    },
+    "noisy": {
+      "path": "c:/Users/kedar/SSVP/ssvp/05_results/ablations/run21_resplit_15es/noise_eval/noise_results.json",
+      "results": {
+        "overall": {
+          "image_level": {
+            "auroc": 87.00396825396825,
+            "f1_max": 75.86206849464924,
+            "ap": 81.33140933140935
+          },
+          "pixel_level": {
+            "auroc": 91.81948060451154,
+            "pro": 58.26781925065566,
+            "ap": 34.91051079155625
+          },
+          "n_samples": 74
+        }
+      }
+    }
+  },
+  "transistor_run21_15es": {
+    "clean": {
+      "path": "c:/Users/kedar/SSVP/ssvp/05_results/ablations/transistor_run21_15es/eval_results/results.json",
+      "results": {
+        "per_category": {
+          "transistor": {
+            "image_level": {
+              "auroc": 93.04545454545453,
+              "f1_max": 89.99999968,
+              "ap": 43.823026102437865
+            },
+            "pixel_level": {
+              "auroc": 94.74884281619131,
+              "pro": 75.71172834841768,
+              "ap": 59.979239038272794
+            },
+            "n_samples": 63,
+            "n_anomalous": 8
+          }
+        },
+        "overall": {
+          "image_level": {
+            "auroc": 93.04545454545453,
+            "f1_max": 89.99999968,
+            "ap": 43.823026102437865
+          },
+          "pixel_level": {
+            "auroc": 94.74884281619131,
+            "pro": 75.71172834841768,
+            "ap": 59.979239038272794
+          },
+          "n_samples": 63
+        }
+      }
+    },
+    "noisy": {
+      "path": "c:/Users/kedar/SSVP/ssvp/05_results/ablations/transistor_run21_15es/noise_eval/noise_results.json",
+      "results": {
+        "overall": {
+          "image_level": {
+            "auroc": 81.13636363636363,
+            "f1_max": 76.153845680473374,
+            "ap": 46.40027764108646
+          },
+          "pixel_level": {
+            "auroc": 71.44922995178132,
+            "pro": 30.8357382295264,
+            "ap": 6.357215960541971
+          },
+          "n_samples": 63
+
+        }
+      }
+    }
+  },
+  "capsule_run21_15es": {
+    "clean": {
+      "path": "c:/Users/kedar/SSVP/ssvp/05_results/ablations/capsule_run21_15es/eval_results/results.json",
+      "results": {
+        "per_category": {
+          "capsule": {
+            "image_level": {
+              "auroc": 94.79166666666666,
+              "f1_max": 82.35294068589005,
+              "ap": 90.25379643287165
+            },
+            "pixel_level": {
+              "auroc": 97.74683305799476,
+              "pro": 88.60499546807223,
+              "ap": 47.5619867617085
+            },
+            "n_samples": 70,
+            "n_anomalous": 22
+          }
+        },
+        "overall": {
+          "image_level": {
+            "auroc": 94.79166666666666,
+            "f1_max": 82.35294068589005,
+            "ap": 90.25379643287165
+          },
+          "pixel_level": {
+            "auroc": 97.74683305799476,
+            "pro": 88.60499546807223,
+            "ap": 47.5619867617085
+          },
+          "n_samples": 70
+        }
+      }
+    },
+    "noisy": {
+      "path": "c:/Users/kedar/SSVP/ssvp/05_results/ablations/capsule_run21_15es/noise_eval/noise_results.json",
+      "results": {
+        "overall": {
+          "image_level": {
+            "auroc": 80.45454545454545,
+            "f1_max": 76.52173863137997,
+            "ap": 82.55764693923658
+          },
+          "pixel_level": {
+            "auroc": 92.77959549677499,
+            "pro": 72.43393026225941,
+            "ap": 49.09238427725474
+          },
+          "n_samples": 70
+        }
+      }
+    }
+  },
+  "run21_15ep": {
+    "note": "Alias to run21_resplit_15es for requested run21_15ep naming.",
+    "source": "run21_resplit_15es",
+    "clean": {
+      "path": "c:/Users/kedar/SSVP/ssvp/05_results/ablations/run21_resplit_15es/eval_results/results.json"
+    },
+    "noisy": {
+      "path": "c:/Users/kedar/SSVP/ssvp/05_results/ablations/run21_resplit_15es/noise_eval/noise_results.json"
+    }
+  },
+  "winclip_zero_shot": {
+    "clean": {
+      "path": "c:/Users/kedar/SSVP/results/winclip_clean",
+      "metrics": {
+        "cable": {
+          "i_auroc": 44.64,
+          "i_f1": 76.35,
+          "i_ap": 56.97,
+          "p_auroc": 49.43,
+          "p_pro": 29.41,
+          "p_ap": 3.02
+        },
+        "transistor": {
+          "i_auroc": 71.71,
+          "i_f1": 67.39,
+          "i_ap": 56.0,
+          "p_auroc": 71.0,
+          "p_pro": 0.0,
+          "p_ap": 12.47
+        },
+        "capsule": {
+          "i_auroc": 54.33,
+          "i_f1": 90.46,
+          "i_ap": 85.42,
+          "p_auroc": 84.39,
+          "p_pro": 0.0,
+          "p_ap": 5.76
+        },
+        "mean": {
+          "i_auroc": 56.89,
+          "i_f1": 78.07,
+          "i_ap": 66.13,
+          "p_auroc": 68.27,
+          "p_pro": 9.8,
+          "p_ap": 7.08
+        }
+      }
+    },
+    "noisy": {
+      "path": "c:/Users/kedar/SSVP/results/winclip_noisy",
+      "noise_injection": {
+        "type": "gaussian",
+        "noise_std": 0.2,
+        "noise_p": 1.0
+      },
+      "metrics": {
+        "cable": {
+          "i_auroc": 46.42,
+          "i_f1": 76.03,
+          "i_ap": 63.84,
+          "p_auroc": 45.82,
+          "p_pro": 28.18,
+          "p_ap": 2.88
+        },
+        "transistor": {
+          "i_auroc": 42.42,
+          "i_f1": 57.55,
+          "i_ap": 41.46,
+          "p_auroc": 62.48,
+          "p_pro": 0.0,
+          "p_ap": 10.94
+        },
+        "capsule": {
+          "i_auroc": 56.48,
+          "i_f1": 90.83,
+          "i_ap": 87.64,
+          "p_auroc": 76.13,
+          "p_pro": 0.0,
+          "p_ap": 5.31
+        },
+        "mean": {
+          "i_auroc": 48.44,
+          "i_f1": 74.8,
+          "i_ap": 64.31,
+          "p_auroc": 61.48,
+          "p_pro": 9.39,
+          "p_ap": 6.38
+        }
+      }
+    }
+  }
+}
