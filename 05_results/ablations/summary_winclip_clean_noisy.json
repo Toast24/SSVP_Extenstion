@@ -1,0 +1,86 @@
+{
+  "model": "WinCLIP",
+  "dataset": "MVTec AD (cable, transistor, capsule)",
+  "settings": {
+    "clean": {
+      "noise_std": 0.0,
+      "noise_p": 0.0
+    },
+    "noisy": {
+      "noise_std": 0.2,
+      "noise_p": 1.0
+    }
+  },
+  "clean": {
+    "categories": {
+      "cable": {
+        "i_roc": 44.64,
+        "i_f1": 76.35,
+        "i_ap": 56.97,
+        "p_roc": 49.43,
+        "p_pro": 29.41,
+        "p_ap": 3.02
+      },
+      "transistor": {
+        "i_roc": 71.71,
+        "i_f1": 67.39,
+        "i_ap": 56.0,
+        "p_roc": 71.0,
+        "p_pro": 0.0,
+        "p_ap": 12.47
+      },
+      "capsule": {
+        "i_roc": 54.33,
+        "i_f1": 90.46,
+        "i_ap": 85.42,
+        "p_roc": 84.39,
+        "p_pro": 0.0,
+        "p_ap": 5.76
+      }
+    },
+    "mean": {
+      "i_roc": 56.89,
+      "i_f1": 78.07,
+      "i_ap": 66.13,
+      "p_roc": 68.27,
+      "p_pro": 9.8,
+      "p_ap": 7.08
+    }
+  },
+  "noisy": {
+    "categories": {
+      "cable": {
+        "i_roc": 46.42,
+        "i_f1": 76.03,
+        "i_ap": 63.84,
+        "p_roc": 45.82,
+        "p_pro": 28.18,
+        "p_ap": 2.88
+      },
+      "transistor": {
+        "i_roc": 42.42,
+        "i_f1": 57.55,
+        "i_ap": 41.46,
+        "p_roc": 62.48,
+        "p_pro": 0.0,
+        "p_ap": 10.94
+      },
+      "capsule": {
+        "i_roc": 56.48,
+        "i_f1": 90.83,
+        "i_ap": 87.64,
+        "p_roc": 76.13,
+        "p_pro": 0.0,
+        "p_ap": 5.31
+      }
+    },
+    "mean": {
+      "i_roc": 48.44,
+      "i_f1": 74.8,
+      "i_ap": 64.31,
+      "p_roc": 61.48,
+      "p_pro": 9.39,
+      "p_ap": 6.38
+    }
+  }
+}
