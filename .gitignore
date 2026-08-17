@@ -1,0 +1,35 @@
+# Virtual environments
+.venv/
+venv/
+gpu_venv/
+env/
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+.ipynb_checkpoints/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+
+# Experiment artifacts (large)
+*.pth
+*.pt
+*.ckpt
+runs/
+outputs/
+
+# Local datasets (download separately)
+**/04_data/datasets/
+
+# Logs
+*.log
+*.tmp
+
+# REFAC ad-hoc outputs at workspace level
+SSVPREFAC/runs/

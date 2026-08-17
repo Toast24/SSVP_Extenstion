@@ -1,0 +1,6 @@
+MVTec AD official dataset page:
+https://www.mvtec.com/company/research/datasets/mvtec-ad
+
+Notes:
+- Download requires agreeing to dataset terms.
+- Place extracted cable category under 04_data/datasets/cable.

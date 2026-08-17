@@ -1,0 +1,2 @@
+﻿run_name,image_auroc,image_f1_max,image_ap,pixel_auroc,pixel_pro,pixel_ap,source
+run21_resplit_15es,97.42063492063492,84.84848435261708,93.61511539143119,95.33689776120521,29.535681104290955,50.88694692577435,05_results/ablations/run21_resplit_15es/eval_results/results.json

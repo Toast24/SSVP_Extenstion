@@ -1,0 +1,77 @@
+{
+  "created_at": "2026-05-22",
+  "runs": {
+    "caption_eval_smoke_spatialonly": {
+      "num_images": 2,
+      "baseline_f1": 0.8610293865203857,
+      "spatial_finetuned_f1": 0.8675349950790405,
+      "delta_f1": 0.006505608558654785
+    },
+    "caption_eval_15ep": {
+      "num_images": 10,
+      "baseline_f1": 0.8294439315795898,
+      "spatial_finetuned_f1": 0.8360034823417664,
+      "delta_f1": 0.006559550762176514
+    },
+    "caption_eval_smoke_deterministic": {
+      "num_images": 2,
+      "baseline_f1": 0.8610293865203857,
+      "spatial_finetuned_f1": 1.0,
+      "delta_f1": 0.13897061347961426
+    },
+    "caption_eval_smoke": {
+      "num_images": 2,
+      "baseline_f1": 0.8264650106430054,
+      "spatial_finetuned_f1": 0.8264650106430054,
+      "delta_f1": 0.0
+    },
+    "caption_eval_smoke_predicted": {
+      "num_images": 2,
+      "baseline_f1": 0.8595036864280701,
+      "spatial_finetuned_f1": 1.0,
+      "delta_f1": 0.14049631357192993
+    },
+    "caption_eval_full_predicted_det": {
+      "num_images": 74,
+      "baseline_f1": 0.8604016304016113,
+      "spatial_finetuned_f1": 1.0,
+      "delta_f1": 0.13959836959838867,
+      "image_level_detection": {
+        "auroc": 96.82539682539684,
+        "f1_max": 88.8888883888889,
+        "ap": 94.0405690895887
+      }
+    },
+    "caption_eval_full_compare": {
+      "num_images": 74,
+      "baseline_f1": 0.8604016304016113,
+      "blip_finetuned_f1": 0.928948700428009,
+      "predicted_map_synthesis_f1": 1.0,
+      "delta_f1_blip": 0.0685470700263977,
+      "delta_f1_predicted": 0.13959836959838867,
+      "image_level_detection": {
+        "auroc": 96.82539682539684,
+        "f1_max": 88.8888883888889,
+        "ap": 94.0405690895887
+      }
+    },
+    "caption_eval_full_predicted": {
+      "num_images": 74,
+      "baseline_f1": 0.8604016304016113,
+      "spatial_finetuned_f1": 1.0,
+      "delta_f1": 0.13959836959838867
+    },
+    "caption_eval_15ep_spatialonly": {
+      "num_images": 10,
+      "baseline_f1": 0.8571136593818665,
+      "spatial_finetuned_f1": 0.926186203956604,
+      "delta_f1": 0.06907254457473755
+    },
+    "caption_eval_15ep_combined": {
+      "num_images": 10,
+      "baseline_f1": 0.8294439315795898,
+      "spatial_finetuned_f1": 0.8360034823417664,
+      "delta_f1": 0.006559550762176514
+    }
+  }
+}

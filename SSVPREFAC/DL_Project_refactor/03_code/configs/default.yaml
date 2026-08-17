@@ -1,0 +1,161 @@
+# SSVP: Synergistic Semantic-Visual Prompting — Configuration
+# Paper: arXiv:2601.09147v2
+
+# ── Backbone Settings ──
+backbone:
+  clip_model: "ViT-L-14"                   # OpenCLIP model name
+  clip_pretrained: "openai"                 # Pretrained weights source
+  clip_input_size: 518                      # patch=14 → 518/14 = 37 grid
+  d_clip: 1024
+  d_dino: 1024
+  dino_model: "dinov2_vitl14"               # DINOv2 fallback (DINOv3 unavailable)
+  dino_input_size: 518                      # DINOv2 uses patch=14 → 518/14 = 37
+  clip_feature_layers: [6, 12, 18, 24]      # Intermediate layer indices
+  dino_feature_layers: [6, 12, 18, 23]      # Adjusted for DINOv2 (24-layer ViT-L)
+  freeze: true
+  text_int8_dynamic_quant: false             # CPU-only dynamic quantization for CLIP text transformer
+
+# ── HSVS Settings ──
+hsvs:
+  d_clip: 1024                              # CLIP ViT-L hidden dim
+  d_dino: 1024                              # DINOv2 ViT-L hidden dim
+  d_proj: 768                               # Projection / synergistic dim (§4.2)
+  d_head: 128                               # Attention head dim
+  num_heads: 6                              # Multi-head attention heads
+  mlp_ratio: 4                              # MLP expansion ratio
+  num_layers: 4                             # Number of scale levels
+
+# ── VCPG Settings ──
+vcpg:
+  n_normal_prompts: 3                       # Normal prompt bank size (§4.2)
+  n_abnormal_prompts: 3                     # Abnormal prompt bank size (§4.2)
+  bg_context_len: 4                         # Shared background token count
+  state_context_len: 4                      # State-specific token count
+  d_text: 768                               # Text embedding dim (CLIP ViT-L)
+  d_latent: 256                             # VAE latent dim
+  alpha_init: 0.0                           # Run21 baseline gating scalar init
+  num_latent_tokens: 1                      # Run21-compatible single latent token
+  prompt_pooling: "mean"                   # Run21-compatible prompt pooling
+
+# ── VTAM Settings ──
+vtam:
+  tau: 0.07                                 # Temperature for softmax (Eq. 14)
+  gamma: 0.5                                # Score balance factor (Eq. 19, §4.2)
+  entropy_aware: false                      # Run21-compatible fixed fusion
+  gamma_min: 0.15                           # Lower clamp for dynamic score fusion
+  gamma_max: 0.85                           # Upper clamp for dynamic score fusion
+  local_quantile: 0.995                     # Robust local anomaly pooling quantile
+  gamma_hidden: 16                          # Hidden width for gamma predictor MLP
+
+# ── Loss Weights ──
+loss:
+  focal_gamma: 2.0                          # Focal loss focusing param (Eq. 20)
+  beta_kl: 0.1                              # KL divergence weight β (§4.2)
+  lambda_vae: 1.0                           # Run21 baseline VAE loss weight
+  lambda_reg: 0.5                           # Reg loss weight λ₂ (§4.2)
+  xi_margin: 0.85                           # Run21 baseline margin threshold
+  dice_weight: 0.0                          # Disable post-run21 segmentation add-on by default
+  lambda_pro: 0.0                           # Disable post-run21 PRO surrogate by default
+  pro_fpr_target: 0.05                      # Soft FPR target for normal pixels
+  pro_fpr_penalty: 4.0                      # Penalty when soft FPR exceeds target
+
+# ── Training Settings ──
+training:
+  epochs: 15                                # §4.2
+  batch_size: 2                             # Reduced for RTX 3050 (4-8GB VRAM)
+  grad_accum_steps: 4                       # Effective batch = 2×4 = 8
+  lr_prompt: 5.0e-4                         # Prompt embedding LR (§4.2)
+  lr_network: 1.0e-4                        # VAE + projection LR (§4.2)
+  weight_decay: 0.01
+  scheduler: "cosine"                       # Cosine annealing
+  warmup_epochs: 1
+  num_workers: 2                            # Run21 baseline worker count
+  pin_memory: true
+  mixed_precision: true                     # FP16 for memory savings
+  use_anomaly_supervision: false            # Deprecated for training script; kept false to avoid leakage
+  use_explicit_val_split: true              # Use /val split if available instead of slicing train data
+  train_all_types: true                     # Load all defect types from train split (not only good)
+  val_split: 0.2                            # Validation split ratio from train set only
+  early_stopping:
+    enabled: true
+    patience: 5
+    min_delta: 1.0e-4
+  consistency:
+    enabled: false
+    lambda: 0.0
+    noise_std: 0.04
+    every_n_steps: 2
+    start_epoch: 2
+  augment:
+    enabled: false
+    hflip: false
+    color_jitter: 0.0
+    sharpness_p: 0.0
+    blur_p: 0.0
+    blur_sigma: [0.1, 1.5]
+    noise_std: 0.0
+    noise_p: 0.0
+
+# ── Data Settings ──
+data:
+  dataset: "mvtec"
+  data_root: "./04_data/datasets/cable_resplit"
+  img_size: 518                             # Backbone input size
+  mask_size: 37                             # Feature grid size (H'×W')
+  center_crop: false
+
+# ── Evaluation Settings ──
+eval:
+  gaussian_sigma: 1.5                       # Lower smoothing for sharper localization
+  threshold: 0.5                            # Binarization threshold
+  clip_percentiles: null                    # Run21-compatible post-processing
+  median_ksize: 0                           # Run21-compatible post-processing
+  calibration:
+    use_noisy_val: false                    # Run21-compatible clean-only calibration
+    noise_std: 0.20
+    salt_pepper_prob: 0.02
+    image_candidates: 256
+    pixel_candidates: 128
+    image_max_samples: 200000
+    pixel_max_samples: 500000
+    seed: 42
+  tta:
+    enabled: false
+    hflip: false
+
+robustness:
+  noise_eval:
+    enabled: true
+    gaussian_std: 0.25
+    blur_sigma: 2.0
+    salt_pepper_prob: 0.03
+    jpeg_quality: 20
+    num_visualizations: 5
+
+captioning:
+  model_name: "Salesforce/blip-image-captioning-base"
+  prompt: "industrial inspection photo"
+  use_domain_prompt: true
+  max_length: 32
+  num_beams: 4
+  quantize_text_transformer_int8: false
+  domain_finetune:
+    enabled: false
+    epochs: 1
+    batch_size: 4
+    lr: 2.0e-5
+    weight_decay: 0.0
+    grad_accum_steps: 1
+    max_length: 40
+    max_train_samples: 96
+    grad_clip_norm: 1.0
+    seed: 42
+
+lora:
+  enabled: false
+  rank: 4
+  alpha: 16
+  dropout: 0.05
+  freeze_base: true
+  target_substrings: ["attn", "mlp"]
+  min_block_index: 20

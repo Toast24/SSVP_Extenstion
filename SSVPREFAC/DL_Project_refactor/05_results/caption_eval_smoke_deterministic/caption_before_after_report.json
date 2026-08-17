@@ -1,0 +1,64 @@
+{
+  "categories": [
+    "cable"
+  ],
+  "num_images": 2,
+  "target_mode": "spatial",
+  "baseline": {
+    "captions": [
+      "three tomatoes in a black bowl on a table",
+      "a black plate with a red and yellow design"
+    ],
+    "references": [
+      "no anomaly",
+      "anomaly at right"
+    ],
+    "bertscore": {
+      "precision": 0.8449342250823975,
+      "recall": 0.8778246641159058,
+      "f1": 0.8610293865203857,
+      "per_sample_f1": [
+        0.8551294207572937,
+        0.8669294118881226
+      ]
+    },
+    "anomaly_matches": [
+      0,
+      0
+    ],
+    "spatial_matches": [
+      0,
+      0
+    ],
+    "nli_entailment": null
+  },
+  "spatial_finetuned": {
+    "captions": [
+      "no anomaly",
+      "anomaly at right"
+    ],
+    "references": [
+      "no anomaly",
+      "anomaly at right"
+    ],
+    "bertscore": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "per_sample_f1": [
+        1.0,
+        1.0
+      ]
+    },
+    "anomaly_matches": [
+      1,
+      1
+    ],
+    "spatial_matches": [
+      0,
+      1
+    ],
+    "nli_entailment": null
+  },
+  "delta_f1": 0.13897061347961426
+}

@@ -1,0 +1,17 @@
+training:
+  epochs: 20
+  train_all_types: true
+  use_anomaly_supervision: false
+  early_stopping:
+    enabled: false
+    patience: 5
+    min_delta: 1.0e-4
+
+captioning:
+  domain_finetune:
+    enabled: true
+    epochs: 1
+    batch_size: 4
+    lr: 2.0e-5
+    max_train_samples: 96
+    seed: 42

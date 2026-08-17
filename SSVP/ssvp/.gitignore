@@ -1,0 +1,34 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+
+# Virtual environments
+.venv/
+venv/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# OS/editor
+.DS_Store
+Thumbs.db
+.vscode/
+
+# Large experiment artifacts
+outputs/
+05_results/ablations/
+*.pth
+*.pt
+*.ckpt
+
+# Local datasets and generated splits
+cable/
+data/cable_resplit/
+04_data/datasets/
+
+# Logs/temp
+*.log
+*.tmp

@@ -1,0 +1,10 @@
+Team Name: 
+Project Title: 
+Topic Number/Name: 
+Faculty Mentor: 
+TA Mentor: 
+
+Member 1: Name | Roll No | ID | Email
+Member 2: Name | Roll No | ID | Email
+Member 3: Name | Roll No | ID | Email
+Member 4: Name | Roll No | ID | Email

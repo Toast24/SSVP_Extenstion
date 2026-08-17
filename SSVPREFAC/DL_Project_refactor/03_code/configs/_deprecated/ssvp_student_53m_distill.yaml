@@ -1,0 +1,142 @@
+# DEPRECATED: Moved to _deprecated/
+# Reason: [pruning/distillation failed — see technical report §3, Table 3]
+# Original location: 03_code/configs/_deprecated/ssvp_student_53m_distill.yaml
+# Preserved for negative-results documentation in paper §5.7.
+
+# SSVP student config (~53M trainable) distilled from run21 baseline
+
+backbone:
+  clip_model: "ViT-L-14"
+  clip_pretrained: "openai"
+  clip_input_size: 518
+  d_clip: 1024
+  d_dino: 1024
+  dino_model: "dinov2_vitl14"
+  dino_input_size: 518
+  clip_feature_layers: [6, 12, 18, 24]
+  dino_feature_layers: [6, 12, 18, 23]
+  freeze: true
+
+hsvs:
+  d_clip: 1024
+  d_dino: 1024
+  d_proj: 640
+  d_head: 96
+  num_heads: 6
+  mlp_ratio: 4
+  num_layers: 4
+
+vcpg:
+  n_normal_prompts: 3
+  n_abnormal_prompts: 3
+  bg_context_len: 4
+  state_context_len: 4
+  d_text: 768
+  d_latent: 256
+  alpha_init: 0.1
+  num_latent_tokens: 8
+
+vtam:
+  tau: 0.07
+  gamma: 0.5
+  entropy_aware: true
+  gamma_min: 0.15
+  gamma_max: 0.85
+  local_quantile: 0.995
+  gamma_hidden: 16
+
+loss:
+  focal_gamma: 2.0
+  beta_kl: 0.1
+  lambda_vae: 0.01
+  lambda_reg: 0.5
+  xi_margin: 0.90
+  dice_weight: 0.3
+  lambda_pro: 0.2
+  pro_fpr_target: 0.05
+  pro_fpr_penalty: 4.0
+
+training:
+  epochs: 15
+  batch_size: 2
+  grad_accum_steps: 4
+  lr_prompt: 5.0e-4
+  lr_network: 1.0e-4
+  weight_decay: 0.01
+  scheduler: "cosine"
+  warmup_epochs: 1
+  num_workers: 6
+  pin_memory: true
+  mixed_precision: true
+  use_anomaly_supervision: false
+  use_explicit_val_split: true
+  train_all_types: true
+  val_split: 0.2
+  early_stopping:
+    enabled: false
+    patience: 5
+    min_delta: 1.0e-4
+  consistency:
+    enabled: true
+    lambda: 0.1
+    noise_std: 0.04
+    every_n_steps: 2
+    start_epoch: 2
+  distillation:
+    enabled: true
+    teacher_checkpoint: "./05_results/ablations/run21_resplit_15es/best_model.pth"
+    teacher_config: "./03_code/configs/default.yaml"
+    lambda_map: 0.25
+    lambda_score: 0.10
+    lambda_feat: 0.0
+  augment:
+    hflip: true
+    color_jitter: 0.2
+    sharpness_p: 0.2
+    blur_p: 0.3
+    blur_sigma: [0.1, 1.5]
+    noise_std: 0.07
+    noise_p: 0.5
+
+data:
+  dataset: "mvtec"
+  data_root: "./04_data/datasets/cable_resplit"
+  img_size: 518
+  mask_size: 37
+  center_crop: false
+
+eval:
+  gaussian_sigma: 1.5
+  threshold: 0.5
+  clip_percentiles: [1.0, 99.0]
+  median_ksize: 3
+  calibration:
+    use_noisy_val: true
+    noise_std: 0.20
+    salt_pepper_prob: 0.02
+    image_candidates: 256
+    pixel_candidates: 128
+    image_max_samples: 200000
+    pixel_max_samples: 500000
+    seed: 42
+  tta:
+    enabled: true
+    hflip: true
+
+robustness:
+  noise_eval:
+    enabled: true
+    gaussian_std: 0.25
+    blur_sigma: 2.0
+    salt_pepper_prob: 0.03
+    jpeg_quality: 20
+    num_visualizations: 5
+
+lora:
+  enabled: false
+  rank: 4
+  alpha: 16
+  dropout: 0.05
+  freeze_base: true
+  target_substrings: ["attn", "mlp"]
+  min_block_index: 20

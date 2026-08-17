@@ -1,0 +1,1021 @@
+SSVP: Synergistic Semantic-Visual Prompting for
+Industrial Zero-Shot Anomaly Detection
+Chenhao Fu1,2,Han Fang2,Xiuzheng Zheng2,Wenbo Wei1,Yonghua Li1,Hao Sun2,Xuelong Li2
+1Beijing University of Posts and Telecommunications,2Institute of Artificial Intelligence (TeleAI),
+China Telecom
+Zero-ShotAnomalyDetection(ZSAD)leveragesVision-LanguageModels(VLMs)toenablesupervision-
+free industrial inspection. However, existing ZSAD paradigms are constrained by single visual
+backbones, which struggle to balance global semantic generalization with fine-grained structural
+discriminability. To bridge this gap, we propose Synergistic Semantic-Visual Prompting (SSVP), that
+efficiently fuses diverse visual encodings to elevate model’s fine-grained perception. Specifically, SSVP
+introduces the Hierarchical Semantic-Visual Synergy (HSVS) mechanism, which deeply integrates
+DINOv3’s multi-scale structural priors into the CLIP semantic space. Subsequently, the Vision-
+Conditioned Prompt Generator (VCPG) employs cross-modal attention to guide dynamic prompt
+generation, enabling linguistic queries to precisely anchor to specific anomaly patterns. Furthermore,
+to address the discrepancy between global scoring and local evidence, the Visual-Text Anomaly Mapper
+(VTAM) establishes a dual-gated calibration paradigm. Extensive evaluations on seven industrial
+benchmarks validate the robustness of our method; SSVP achieves state-of-the-art performance with
+93.0% Image-AUROC and 92.2% Pixel-AUROC on MVTec-AD, significantly outperforming existing
+zero-shot approaches.
+Correspondence to:Hao Sun (sun.010@163.com), Xuelong Li (xuelong_li@ieee.org)
+1 Introduction
+Industrial Anomaly Detection (IAD) is vital for smart manufacturing and industrial quality inspection,
+ensuring production reliability (Liu et al., 2024; Hu et al., 2025; Rahmaniar and Suzuki, 2025; Yang et al.,
+2024; Chen and Imani, 2025). Yet, traditional supervised models struggle with the inherent data scarcity
+and frequent category shifts (Zhou et al., 2025; Zhang et al., 2025). Zero-Shot Anomaly Detection (ZSAD)
+overcomes this by eliminating the need for target domain labels (Luo et al., 2024), aiming to identify unseen
+defects via generalized knowledge transfer. Recently, CLIP-based VLMs (Chen et al., 2025; Gao et al.,
+2026) have enabled language-guided visual detection by constructing a unified semantic space. While early
+methods used static templates (Jeong et al., 2023; Chen et al., 2023), current research prioritizes Dynamic
+Prompting (Zhou et al., 2022, 2023; Cao et al., 2024). By adapting to specific inputs, this approach handles
+complex defects more effectively than fixed descriptions.
+Despite these advancements, existing dynamic prompting methods face three systemic limitations in complex
+scenarios. First, VLM’s global alignment compromises fine-grained discriminability, failing to capture minute
+distortions essential for precise industrial inspection. Second, current probabilistic prompting (Qu et al., 2025)
+lacks deep cross-modal interaction. By relying on shallow linear superposition to integrate visual priors, these
+methods fail to effectively enable text embeddings to adaptively anchor to specific anomaly patterns. Third,
+global scoring is misaligned with local evidence. The heavy reliance on global cosine similarity often causes
+subtle anomaly signals to be overshadowed by dominant background noise, leading to missed detections in
+high-precision tasks. To intuitively illustrate these limitations, we present a conceptual comparison between
+existing paradigms and our proposed framework in Figure 1. To address these challenges, we propose the
+Synergistic Semantic-Visual Prompting (SSVP) framework. Unlike previous approaches that treat modalities
+in isolation, SSVP integrates a deep synergistic flow that harmonizes CLIP’s generalized semantic reasoning
+1arXiv:2601.09147v2  [cs.CV]  19 Jan 2026
+
+--- PAGE BREAK ---
+
+SSVP(Ours)
+Text
+EncoderImage
+Encoder
+DINO
+Encoder
+…
+Image
+FeaturePatch-level Feature
+Text EmbeddingsLearnable Prompt  
+Class … 
+ClassN
+… … 
+… Image-Level Anomaly Scorenormalabnormal{Class：Defect}
+Context PromptState Prompt
+Pixel-Level Anomaly Map 
+Input ImageCLIP-Based ZSAD Method
+Input Image
+[A bright photo of a broken bottle]
+Cosine
+SimilarityStatic PrompPatch-level Feature
+Text Embedding Anomaly Map Dynamic Promp
+Class … … 
+Context PromptState PromptImage-level Feature
+Cosine
+Similarity
+Anomaly Scorenormal abnormalText Embedding
+AggregateAggregateImage
+Encoder
+Text
+Encoder
+Cosine
+SimilarityFusion
+AggregateAggregate
+SamplingFigure 1Conceptual comparison of ZSAD paradigms: unlike traditional shallow fusion methods, SSVP establishes a
+deep synergistic flow for adaptive prompt generation. The red dashed lines highlight the distinction between our SSVP
+method and traditional methods.
+with DINO’s fine-grained structural localization.
+Specifically, we instantiate this method through three technically distinct modules. First, to bridge the feature
+granularity gap, we design the Hierarchical Semantic-Visual Synergy (HSVS) mechanism. In detail, HSVS
+employs an Adaptive Token Features Fusion (ATF) block that utilizes dual-path cross-modal attention to align
+diverse features, explicitly injecting DINOv3’s multi-scale structural priors into CLIP’s semantic manifold via
+learnable projection matrices. Second, to alleviate the limitations of deterministic prompting, we propose the
+Vision-Conditioned Prompt Generator (VCPG). This module leverages a Variational Autoencoder (VAE)
+to model the latent distribution of visual anomalies and employs a text-latent cross-attention mechanism.
+This design allows text embeddings to dynamically "retrieve" and integrate generative visual biases via
+the reparameterization trick, ensuring robust anchoring to unseen defect patterns. Third, to overcome the
+global-local disconnection, we construct the Visual-Text Anomaly Mapper (VTAM). This module implements
+an Anomaly Mixture-of-Experts (AnomalyMoE) paradigm driven by a dual-gating mechanism, encompassing
+global scale selection and local spatial filtering. By adaptively routing multi-scale features and calibrating
+global scores with prominent local evidence, VTAM ensures precise anomaly localization.
+Overall, the core contributions of this study are summarized as follows:
+Hierarchical Semantic-Visual Synergy:HSVS boosts fine-grained perception via deep fusion of multi-scale
+structural priors.
+Visual Conditional Prompting:VCPG uses generative visual priors to modulate text embeddings, enhancing
+prompt diversity and semantic consistency.
+Locally Enhanced Discrimination:VTAM calibrates global scores via an Anomaly Mixture-of-Experts strategy
+to resolve insensitivity to subtle defects.
+2
+
+--- PAGE BREAK ---
+
+2 Related Work
+2.1 Zero-Shot Anomaly Detection
+The integration of Vision-Language Models (VLMs) has established a flexible paradigm for Zero-Shot Anomaly
+Detection (ZSAD) (Xu et al., 2025; Zhu et al., 2025). By aligning visual data with linguistic concepts, these
+models enable the recognition of anomalies through descriptions rather than examples. This approach differs
+fundamentally from traditional supervised strategies. Traditional methods rely heavily on extensive training
+samples from specific inspection scenarios. In contrast, ZSAD prioritizes cross-domain generalization. It
+effectively leverages universal knowledge learned from large-scale source datasets. Consequently, the system
+can detect anomalies in unseen target domains without requiring additional training on them. Pioneering
+works have utilized CLIP (Liu et al., 2024; Radford et al., 2021) through various strategies to adapt to this
+task. For instance, some approaches employ multi-scale sliding windows to improve localization (Jeong et al.,
+2023), while others use linear embedding adapters (Chen et al., 2023) or prototype memory banks to estimate
+rarity (He et al., 2025). While effective for object-level classification, these methods predominantly rely on
+coarse feature matching, which often limits their capability to capture fine-grained textural and structural
+defects due to the lack of dense visual-semantic interaction.
+2.2 Prompt Learning methods
+Prompt engineering is pivotal for adapting VLMs to anomaly detection, evolving from static templates to
+probabilistic generation(Jin et al., 2025; Cao et al., 2025). Early methods (Jeong et al., 2023; Chen et al.,
+2023) relied on manually designed static prompts, which struggle to cover diverse defect types. To improve
+adaptation, dynamic prompting methods (Zhou et al., 2022, 2023; Cao et al., 2024) were introduced, optimizing
+learnable context vectors to achieve instance-specific semantic adjustment. However, these methods remain
+deterministic, converging to point estimates that may not fully encompass the long-tail distribution of unseen
+anomalies. Consequently, recent research has pivoted towards probabilistic modeling (Derakhshani et al.,
+2023). Notably, Bayes-PFL (Qu et al., 2025) utilizes Variational Autoencoder (Kingma and Welling, 2013) to
+generate diverse prompt distributions via latent sampling. Despite this progress, current generative methods
+typically condition generation solely on simple CLIP text embeddings, thereby missing the fine-grained local
+cues necessary for precise defect localization.
+2.3 Visual Feature Representation
+The efficacy of anomaly detection depends on the granularity of visual representations. CLIP (Radford et al.,
+2021; Lv et al., 2025) leverages massive image-text pairs to establish a robust alignment between visual
+features and linguistic concepts. This grants it robust global semantic understanding. However, it lacks
+the pixel-level discriminability required for industrial inspection. In contrast, DINO (Oquab et al., 2023;
+Siméoni et al., 2025) leverages large-scale self-supervised training to capture dense structural and textural
+details. Consequently, DINO offers fine-grained perception that effectively complements CLIP’s semantic
+capabilities. Approaches in the unimodal AD landscape, employing techniques like memory banks (Roth
+et al., 2022; Damm et al., 2025; Batzner et al., 2024; Ammar et al., 2025) or normalizing flows (Liu et al.,
+2023; Yu et al., 2021), have proven highly effective. Yet, a major limitation is their lack of zero-shot inference
+capabilities. A primary goal in ZSAD is to enhance generalization capabilities. To achieve this, it is beneficial
+to combine multiple models and utilize their complementary strengths. However, integrating these models
+effectively remains a significant challenge. While recent works like FiLo (Gu et al., 2024) and MuSc (Li et al.,
+2024) explore multi-scale alignment, simple fusion strategies often suffer from feature conflict due to distinct
+manifold topologies. This underscores the necessity for a deep synergy mechanism, as proposed in SSVP, to
+effectively inject discriminative structural priors into the semantic space.
+2.4 Feature Synergy Enhancement Mechanisms
+Synergistic methods that integrate multi-modal and multi-scale features have gained prominence across diverse
+computer vision domains, ranging from medical imaging (Dai et al., 2026) and industrial fault diagnosis (Ye
+et al., 2024) to multi-modal sentiment analysis (Wang et al., 2025), autonomous driving (Rajpoot and Agrawal,
+3
+
+--- PAGE BREAK ---
+
+CLIP-Text
+EncoderCLIP-Image
+Encoder
+DINO
+Encoder
+[CLS] [Patch Tokens]+
++HSVS +
+VCPG
+[ Norm Embedding]
+[ Defect Embedding]
+Visual-Text Anomaly Mapper VTAM
+Vision-Conditioned Prompt GeneratorHierarchical Semantic-Visual SynergyInput Image 
+Pixel-Level 
+Anomaly Map 
+Segmentation MaskLearnable Prompt Layer
++ {CLASS}
+ +
++[CLS] [Patch Tokens][F-CLS] [F-Patch]
+ATF
+ATFMLP C+ {CLASS}
+VAE
+Encoder
+VAE
+Decoder μ
+σs0 sn
+reparametersi
+…Background PromptState Prompt N
+Prompt 
+Attention
+Adaptive Token Features Fusionvalue
+querykey
+Trainable
+ Frozensource prompt fusion prompt
+SFeatures Similarity  Layer-wise Features Sum Features Concat C Layer-wise MutiplicationK
+VQ
+SoftmaCross 
+Attention
+Linear QQQ
+KKK
+VVVImage-Level Anomaly Score
+Mask 
+binarizationnormalabnormal{Class：Defect}
+S+
++Image-Tokens
+Text-Prompt
+[N, C]
+[C, h*w +1]
+[N, h*w +1]
++
+Anomaly MapLinearMaxγ
+1-γLG Anomaly 
+ScoreCemb
+Demb
+Anomaly
+MoE…Figure 2Framework of Synergistic Semantic-Visual Prompting (SSVP). Three core modules: HSVS aligns semantic
+and structural features; VCPG generates vision-conditioned prompts; VTAM refines scores via local-global interaction.
+2025), and general visual recognition (Li et al., 2025; Liu et al., 2022). These achievements underscore
+the potential of collaborative intelligence. Notably, AI Flow (An et al., 2025) introduces the concept of
+interaction-based emergence. It posits that the dynamic coordination of diverse agents can transcend the
+limitations of individual components. Inspired by AI Flow, SSVP adopts this concept by establishing a robust
+synergy between semantic reasoning and visual perception. Traditional methods typically rely on the static
+concatenation of features. However, this approach limits the effective interaction between different modalities.
+To address this, our method introduces a dynamic fusion process. Specifically, fine-grained visual details
+actively inject spatial information into global semantic representations. This process iteratively calibrates
+high-level understanding with local texture details. Consequently, our method outperforms standard strategies
+in detecting subtle defects.
+3 Method
+In this section, we elaborate on the proposed SSVP framework. As illustrated in Figure 2, SSVP is designed
+to resolve the critical challenges of feature granularity bottlenecks, semantic drift, and coarse discrimination
+in zero-shot anomaly detection through deep cross-modal synergy. Through a synergistic fusion of high-level
+semantic contexts and multi-scale structural details, the framework establishes a robust visual-semantic
+alignment mechanism capable of identifying unseen defects without target-domain supervision. The framework
+consists of three logically coupled modules. (1) Hierarchical Semantic-Visual Synergy (HSVS) constructs
+robust visual representations by aligning and injecting DINO fine-grained structural features into the CLIP
+semantic manifold. (2) Vision-Conditioned Prompt Generator (VCPG) injects enhanced visual features as
+strong priors into the latent space and utilizes cross-modal attention to guide text embeddings to precisely
+anchor on defect regions. (3) Visual-Text Anomaly Mapper (VTAM) establishes a local-global interaction
+paradigm to dynamically rectify global scores with local details for enhanced detection sensitivity. The detailed
+forward inference pipeline is presented in Algorithm 1.
+4
+
+--- PAGE BREAK ---
+
+Algorithm 1:Forward Inference Pipeline of SSVP
+Input:ImageI, Visual EncodersE clip,Edino, Text EncoderT clip
+1Parameters:Learnable ParametersΘ ={Θ HSV S , ϕV AE,ΘV CPG ,ΘMoE,Pn,Pa, α};
+Output:Anomaly MapP map, Anomaly ScoreS final, Intermediate VarsΦ aux
+// Feature Extraction
+2{Fc
+g, Fc
+l} ← E clip(I),{Fd
+g, Fd
+l} ← E dino(I);
+// Stage 1: Hierarchical Semantic-Visual Synergy (HSVS)
+3Project to subspace:Q (·), K(·), V(·)←Proj(Fc
+l, Fd
+l; ΘHSV S );
+4Bi-Attn:A c↔d←Bi-Attn(Q, K, V);
+5Synergistic Features:Vglobal
+syn , Vlocal
+syn←Fc+MLP([A c→d∥Ad→c]);// Eq. 5
+// Stage 2: Vision-Conditioned Prompt Generator (VCPG)
+6Init embeddings:T init← T clip(Pn∪ Pa);
+7VAE Inference:µ, σ←E ϕ(Vglobal
+syn ;ϕ);z←µ+ϵσ;// Reparameterization
+8Visual Injection:δ inj←CrossAttn(T init, z; Θ V CPG );T final←T init+αδ inj;
+// Stage 3: Anomaly Mixture-of-Experts (AnomalyMoE)
+9Pmap←AnomalyMoE({Vlocal
+syn}, Vglobal
+syn , Tfinal; ΘMoE);// Algorithm 2
+// Final Scoring
+10Local Evidence:S local←Mean(SpatialMaxPool(P map));
+11Global Prior:S global←CosineSim(Vglobal
+syn , Tfinal);
+12Final Score:S final←(1−γ)S global +γS local;// Eq. 19
+13Store Aux Vars:Φ aux← {z, Vglobal
+syn , Tinit, Tfinal};
+14returnP map, Sfinal,Φaux
+3.1 Hierarchical Semantic-Visual Synergy (HSVS)
+To bridge the gap between the global semantics of CLIP and the fine-grained structures of DINOv3, we
+propose the HSVS mechanism. The core component of HSVS is the Adaptive Token Features Fusion (ATF)
+module. ATF constructs a refined feature interaction flow based on dual-path cross-modal attention. First,
+given an input image I, we extract features using CLIP and DINOv3 encoders and decouple them into global
+class tokens and local patch feature sequences:
+{Fc
+g, Fc
+l}=E clip(I),{Fd
+g, Fd
+l}=E dino(I),(1)
+where Fc
+l∈RN×D candFd
+l∈RN×D ddenote the local features of CLIP and DINO. ATF processes the global
+and local pairs independently. Using the local branch for illustration, to align these distinct features within a
+shared latent subspace, we first employ learnable projection matrices to transform the features into Query,
+Key, and Value embeddings. Then, we construct two parallel interaction paths:
+Qc=Fc
+lWc
+Q, K d=Fd
+lWd
+K, V d=Fd
+lWd
+V,
+Qd=Fd
+lWd
+Q, K c=Fc
+lWc
+K, V c=Fc
+lWc
+V,(2)
+where Wc
+(·)∈RDc×dheadandWd
+(·)∈RDd×dheaddenote the projection weights for the respective feature paths.
+Subsequently, we compute dual attention maps to integrate complementary information. The first path queries
+DINO features with CLIP semantics, while the second path performs the reverse operation. The normalized
+cross-modal attention weights are calculated as:
+Attn c→d=SoftmaxQc(Kd)⊤
+√dhead
+Vd,
+Attn d→c=SoftmaxQd(Kc)⊤
+√dhead
+Vc,(3)
+where Attn c→dexplicitly injects fine-grained geometric priors into the semantic manifold, while Attn d→c
+provides reciprocal structural reinforcement. After obtaining the dual-path context features, we apply Layer
+Normalization (LN) and concatenate them along the channel dimension to form a joint descriptorZ joint:
+5
+
+--- PAGE BREAK ---
+
+Zjoint = [LN(Attn c→d)∥LN(Attn d→c)],(4)
+where ∥denotes the concatenation operation. To achieve deep feature fusion and introduce non-linearity,
+Zjointis fed into a two-layer Multilayer Perceptron (MLP) activated by GELU. Finally, to maintain the
+distributional stability of the original semantic space, we employ a residual connection to add the fused
+features back to the original representation, yielding the final local synergistic featureVlocal
+syn:
+Vlocal
+syn =Fc
+l+Fmlp(Zjoint).(5)
+Similarly, the global synergistic feature Vglobal
+synis computed via the same ATF logic. The final output set
+{Vglobal
+syn , Vlocal
+syn}thus combines the dual advantages of zero-shot semantic understanding and pixel-level
+structural awareness.
+3.2 Vision-Conditioned Prompt Generator (VCPG)
+The core innovation of SSVP lies in the VCPG module. Traditional dynamic prompting is often limited to
+static representations, failing to capture the long-tail distribution of unseen anomalies. VCPG resolves this by
+introducing a “visual-latent” interaction mechanism, utilizing variational inference to transform fine-grained
+visual prompts into additive semantic biases.
+3.2.1 Structured Learnable Prompt Embeddings
+To distinguish between invariant environmental context and specific anomaly states, we propose a Decoupled
+Prompt Construction Strategy. We simplify the prompt parameterization by decomposing it into shared and
+state-specific components. Specifically, the general prompt templatetis defined as:
+t= [V] bg,[V] state,[CLASS].(6)
+Inthisformulation:[ V]bg={v1, . . . , v L}denotestheparameter-sharedbackgroundvectorsequence. Regardless
+of the sample category (normal or abnormal), this component aims to learn domain-invariant environmental
+semantics (e.g., texture styles, lighting conditions).[ V]statedenotes the state-specific vector sequence. We
+learn a set of[ V]normalfor the normal prompt bank Pn, and a separate set of[ V]abnormal for the abnormal
+prompt bank Pa. This design forces the model to focus on state discrepancies rather than background
+variations. These sequences are processed by the text encoder Tto generate the initial text embedding Tinit.
+3.2.2 Variational Visual Modeling and Attention Interaction
+Inspired by Bayes-PFL (Qu et al., 2025), we introduce a visual latent injection mechanism. HSVS features are
+encoded via a VAE into latent representations, which interact with learnable prompts through cross attention.
+This enables text semantics to adapt dynamically to visual anomaly patterns. To capture the uncertainty
+of anomaly appearances, we employ a VAE to learn the latent manifold. We utilize the global synergistic
+feature Vglobal
+synderived from the HSVS as the input observation. The probabilistic encoder Eϕ, composed of
+two parallel MLPsF µandF σ, maps the visual feature to the parameters of the latent distribution:
+µ=F µ(Vglobal
+syn ),logσ2=Fσ(Vglobal
+syn ),(7)
+where µandσ2represent the mean and variance of the latent Gaussian distribution, respectively. To ensure
+differentiability during back-propagation, we apply the Reparameterization Trick. We sample a standard
+Gaussian noiseϵ∼ N(0,I)and generate the latent variablezvia an affine transformation:
+z=µ+ϵ⊙explogσ2
+2
+.(8)
+Here, zdenotes the Visual Latent Bias, which encodes the global anomaly distribution of the input image.
+To regularize the latent space toward a standard normal distribution, we optimize the VAE by maximizing
+the Evidence Lower Bound (ELBO). This method aligns with established reconstruction-based paradigms in
+anomaly detection (Deng and Li, 2022). The VAE lossL V AEis formulated as:
+LV AE =∥Vglobal
+syn−D θ(z)∥2
+2+β·D KL(qϕ(z|Vglobal
+syn )∥N(0,I)),(9)
+6
+
+--- PAGE BREAK ---
+
+where Dθdenotes the decoder and βserves as a balancing coefficient. During inference, we employ a Text-
+Latent Cross-Attention module to modulate text semantics using the sampled z. Specifically, this mechanism
+treats the initial text embedding Tinitas the Query and maps the latent bias zto Key and Value embeddings
+to generate the visually enriched residualδ inj:
+Qtext=TinitWQ, K z=zW K, V z=zW V,
+δinj=SoftmaxQtext(Kz)⊤
+√dk
+Vz.(10)
+3.2.3 Gated Injection with Margin-Based Constraint
+Finally, we inject the generated visual bias into the text embeddings. To prevent excessive visual information
+from distorting the original class distribution, we introduce an Adaptive Gating Mechanism alongside a
+Margin-based Semantic Regularization. We inject the computed visual bias δinjinto the initial text embedding
+through a learnable gating scalarα(initialized to 0):
+Tfinal =LayerNorm(T init+α·δ inj).(11)
+The gating scalarαadaptively regulates the strength of the injected visual bias based on the uncertainty of
+the input image. To balance semantic consistency with visual specificity, we avoid rigidly constraining Tfinal
+to the initial anchor. We impose a relaxed constraint, formulating the regularization lossL regas:
+Lreg= max
+0, ξ−Tfinal·sg(T init)⊤
+∥Tfinal∥∥sg(T init)∥
+,(12)
+where ξrepresents a predefined similarity threshold, and sg(·)denotes the stop-gradient operator. This
+formulation implies that penalties are incurred only when the cosine similarity drops below ξ. Effectively,
+this mechanism defines a semantic neighborhood: as long as Tfinalremains within this region, the model
+is permitted to leverage visual bias to optimize anomaly detection performance, thereby preventing the
+representation from collapsing into a static embedding.
+3.3 Visual-Text Anomaly Mapper (VTAM)
+Existing ZSAD methods are limited by misaligned global and local representations. Global semantics often
+ignore fine-grained anomaly signals, while static aggregation fails to adapt to defects manifesting at varying
+scales. To address this, we introduce an Anomaly Mixture-of-Experts (AnomalyMoE) module that dynamically
+routes multi-scale features via a dual-gating mechanism, ensuring precise localization prior to global calibration.
+3.3.1 Pixel-Wise Anomaly Probability Map Construction
+To initiate the localization process, we first compute layer-wise anomaly probability maps using the synergistic
+features derived from the HSVS module and the optimized anomaly prompts. Given the synergistic local
+feature map Vlocal,(l)
+syn ∈RHl×W l×Dat the l-th layer and the visually-conditioned prompt Tfinal, we calculate
+the dense cosine similarity to generate the raw anomaly mapM(l):
+M(l)
+h,w=Vlocal,(l)
+syn (h, w)·(T final)⊤
+∥Vlocal,(l)
+syn (h, w)∥∥T final∥.(13)
+To ensure numerical stability and normalize scales across different layers, we transform these raw similarity
+scores into pixel-wise anomaly probabilities via a Softmax operation applied across the normal and abnormal
+channels:
+P(l)
+anom(h, w) =exp(M(l)
+anom[h, w]/τ)
+exp(M(l)
+norm[h, w]/τ) + exp(M(l)
+anom[h, w]/τ).(14)
+Here,P(l)
+anom∈[0,1]H×Wrepresents the initial confidence of the l-th expert. τis a temperature parameter that
+controls the sharpness of the probability distribution, scaling the cosine similarities to enhance discriminability.
+7
+
+--- PAGE BREAK ---
+
+3.3.2 Anomaly Mixture-of-Experts (AnomalyMoE)
+We propose a dense dual-gating mechanism, to effectively aggregate multi-scale experts. In contrast to
+sparse top- kselection, our method utilizes differentiable soft-gating to adaptively combine all feature scales,
+simultaneously addressing inter-layer scale selection and inter-layer noise filtering. The detailed inference
+procedure is summarized in Algorithm 2.
+We posit that the global semantic context carries the most informative feature scale for the input image. To
+model this dependency, we employ the global synergistic feature Vglobal
+synto generate scale-specific weights
+wscale∈RL:
+wscale=Softmax
+Fglobal
+gate (Vglobal
+syn )
+,(15)
+whereFglobal
+gateis a Multi-Layer Perceptron (MLP). This global gating branch allows the model to adaptively
+highlight specific layers, such as focusing on shallow layers when processing texture-centric images. Comple-
+menting the scale selection, we recognize that even within the optimal layer, background regions may introduce
+irrelevant noise. To further purify the features, we employ a localized gating network Flocal
+gate(implemented as
+a1×1convolution) to generate a spatial attention maskM(l)
+spatial∈[0,1]H×W:
+M(l)
+spatial=σ
+Flocal
+gate(Vlocal,(l)
+syn )
+,(16)
+where σdenotes the sigmoid function. This local gating branch acts as a pixel-wise filter to suppress non-
+anomalous regions. Finally, the fused pixel-wise anomaly map Pmapis obtained by aggregating the experts,
+weighted by both the global scale importance and local spatial saliency:
+Pmap=LX
+l=1wscale[l]·
+M(l)
+spatial⊙ P(l)
+anom
+,(17)
+where ⊙denotes element-wise multiplication. Through this dual-gated aggregation, the model effectively
+filters out irrelevant scales and background noise, yielding a high-quality anomaly map.
+3.3.3 Score Enhancement Strategy
+We utilize the generated anomaly map to enhance the global classification score by extracting the most
+prominent local evidence via Spatial Max-Pooling:
+Slocal= max
+h,wPmap(h, w).(18)
+The local evidence acts as a dynamic gain term. We inject it into the global semantic score to refine the
+prediction. The result is the final anomaly scoreS final:
+Sfinal = (1−γ)· ⟨Vglobal
+syn , Tfinal⟩+γ·S local,(19)
+whereγbalances the contribution of global semantics and local details.
+3.4 Objective Function
+The SSVP framework is trained end-to-end using a joint objective that supervises both pixel-level segmentation
+and image-level classification. For pixel-level supervision, we employ the focal loss on the anomaly probability
+mapP(l)
+anomfrom the VTAM module to address the severe imbalance between normal and anomalous pixels.
+Given the ground-truth maskY∈ {0,1}H×W, the segmentation loss is defined as:
+LSeg=−1
+HWX
+h,w
+Yh,w(1−p h,w)λlog(p h,w)
++ (1−Y h,w)pλ
+h,wlog(1−p h,w)
+,(20)
+8
+
+--- PAGE BREAK ---
+
+Algorithm 2:Anomaly Mixture-of-Experts (AnomalyMoE)
+Input:Multi-scale Local Features{Vlocal,(l)
+syn }L
+l=1, Global FeatureVglobal
+syn, Text PromptT final
+1Parameters:MoE ParametersΘ MoE ={Fglobal
+gate ,Flocal
+gate};
+Output:Fused Anomaly MapP map
+// 1. Generate Raw Experts (Layer-wise Maps)
+2Initialize map listP experts ←[];
+3forl←1toLdo
+4M(l)←CosSim(Vlocal,(l)
+syn , Tfinal);// Eq. 13
+5P(l)←Softmax(M(l));// Eq. 14
+6AddP(l)toP experts;
+7end
+// 2. Branch A: Global Scale Gating (Inter-layer Weighting)
+8Scale Logitsh scale← Fglobal
+gate (Vglobal
+syn );
+9Scale Weightsw scale←Softmax(h scale);// Eq. 15
+// 3. Branch B: Local Spatial Gating (Intra-layer Attention)
+10Initialize fused mapP map←0;
+11forl←1toLdo
+12Spatial LogitsH(l)
+spatial← Flocal
+gate(Vlocal,(l)
+syn );
+13Spatial MaskM(l)
+spatial←σ(H(l)
+spatial);// Eq. 16
+// 4. Dual-Gated Aggregation
+14P(l)
+weighted←w scale[l]·(M(l)
+spatial⊙ P(l));
+15P map← P map+P(l)
+weighted;// Eq. 17
+16end
+17returnP map
+where ph,w=P(l)
+anom(h, w)denotes the predicted probability, and λis the focusing parameter.In addition to
+segmentation, image-level supervision is crucial to optimize the VTAM fusion mechanism and enforce the
+global representation to be anomaly-aware. We supervise the final fused score Sfinalusing the image-level
+binary labely img∈ {0,1}via the binary cross-entropy (BCE) loss:
+LClass =BCE(σ(S final), yimg),(21)
+where σ(·)is the Sigmoid function used to normalize the score. By back-propagating LClass, the model learns
+to dynamically adjust the contribution of local and global features for robust decision-making.Consequently,
+the total training objective Ltotalaggregates the segmentation and classification losses with the regularization
+terms derived from the VCPG module:
+Ltotal=LSeg+LClass +λ1LV AE+λ2Lreg,(22)
+where LV AEandLregenforce latent distribution and semantic consistency constraints, respectively, which
+are balanced by hyperparameters λ1andλ2.The complete optimization process, including the calculation of
+these losses and the gradient update steps, is summarized in Algorithm 3.
+4 Experiments
+In this section, we conduct extensive experiments to evaluate the effectiveness of the proposed SSVP framework.
+We first introduce the datasets and evaluation metrics. Subsequently, we describe the implementation details
+and training protocols. We then compare SSVP with state-of-the-art (SOTA) zero-shot anomaly detection
+methods, followed by in-depth ablation studies and qualitative analysis to verify the contribution of each
+component.
+9
+
+--- PAGE BREAK ---
+
+Algorithm 3:Optimization Strategy of SSVP
+Input:Training DatasetD, Max EpochsE, Learning rateη
+Hyperparameters:KL weightβ, Loss weightsλ 1, λ2, Marginξ
+1Parameters:Learnable ParametersΘ(Initialized);
+Output:Optimized ParametersΘ∗
+2forepoch= 1toEdo
+3forbatch(I, GT local, GT global )∈ Ddo
+// 1. Execute Forward Pipeline (Algorithm 1)
+4P map, Sfinal,Φaux←RunForward(I; Θ);
+5UnpackΦ aux→ {z, Vglobal
+syn , Tinit, Tfinal};
+// 2. Supervision Losses
+6L sup←Focal(P map, GT local) +BCE(S final, GT global );// Eq. 20, 21
+// 3. Image Reconstruction Distribution Constraint
+7Reconstruct Feature:ˆv←D θ(z);
+8L V AE← ∥Vglobal
+syn−ˆv∥2
+2+βD KL(qϕ(z|Vglobal
+syn )∥N(0,I));// Eq. 9
+// 4. Text Semantic Consistency
+9L reg←MarginLoss(T final, Tinit;ξ);// Eq. 12
+// 5. Total Objective and Gradient Update
+10L total← L sup+λ1LV AE+λ2Lreg;// Eq. 22
+11Θ←Θ−η∇ ΘLtotal;// Gradient Descent
+12end
+13end
+14returnΘ
+4.1 Datasets and Evaluation Metrics
+To comprehensively evaluate the robustness and generalization capability of SSVP across diverse industrial
+scenarios, we utilize seven challenging benchmarks covering object-centric, texture-centric, and real-world
+surface defect scenarios:
+•MVTec-AD (Bergmann et al., 2019): A standard industrial benchmark comprising 5,354 high-resolution
+images across 15 categories (5 textures, 10 objects). It features varied defect types ranging from subtle
+scratches to structural deformations.
+•VisA(Zouetal.,2022): Alarge-scaledatasetwith9,621imagesspanning12categories. Itincludesobjects
+with complex structures, multiple instances, and loose spatial layouts, posing significant challenges for
+zero-shot localization.
+•BTAD (Mishra et al., 2021): The BeanTech Anomaly Detection dataset contains 2,540 images of 3
+real-world industrial products, focusing on subtle surface defects.
+•KSDD2 (Božič et al., 2021): The Kolektor Surface-Defect Dataset 2 consists of 3,355 images of electrical
+commutators, specifically designed for detecting fine surface cracks.
+•RSDD (Yu et al., 2018): The Rail Surface Defect Dataset contains Type-I and Type-II rail surface
+images, challenging models with complex background noise.
+•DAGM (Deutsche Arbeitsgemeinschaft für Mustererkennung, 2007): A synthetic dataset (DAGM 2007)
+containing 10 classes of varying textures with generated anomalies, used to evaluate robustness on
+texture defects.
+•DTD-Synthetic (Aota et al., 2023): Based on the Describable Textures Dataset, we evaluate on synthetic
+anomalies to test the model’s ability to handle diverse texture patterns.
+We adopt a strict Cross-Domain Zero-Shot Transfer protocol. Specifically, we use the training set of MVTec-AD
+as the auxiliary source domain for VisA evaluation, and the training set of VisA as the source domain for all
+other datasets (MVTec-AD, BTAD, etc.), ensuring no target data leakage.
+Comparison Baselines.We benchmark SSVP against state-of-the-art methods in the ZSAD domain to verify
+10
+
+--- PAGE BREAK ---
+
+its superiority. The comparison models include: (1) Zero-Shot Baselines: WinCLIP (Jeong et al., 2023),
+APRIL-GAN (Chen et al., 2023); (2) Dynamic Prompting Methods: AnomalyCLIP (Zhou et al., 2023),
+AdaCLIP (Cao et al., 2024) and Bayes-PFL (Qu et al., 2025).
+Zero-Shot Training Protocol.We adopt a strict Cross-Domain Zero-Shot Transfer protocol to ensure no data
+leakage from the target domain.
+•For VisA Evaluation: We utilize the training sets of the 15 categories from MVTec-AD as the auxiliary
+source domain to optimize the learnable parameters (Prompt Banks, VAE, HSVS weights).
+•ForOtherDatasets: ForevaluationsonMVTec-AD,BTAD,KSDD2, RSDD,DAGM,andDTD-Synthetic,
+we utilize the training sets of the 12 categories from VisA as the auxiliary source domain.
+Under this setting, the model strictly adheres to the zero-shot assumption, as it never encounters any normal
+or abnormal samples (images or text descriptions) from the target categories during the training phase.
+Evaluation Metrics.We employ standard metrics to evaluate performance at both image and pixel levels:
+•Image-level Metrics: We report AUROC, F1-Max (maximum F1-score at optimal threshold), and AP
+(Average Precision) to comprehensively assess anomaly classification performance, ensuring a robust
+evaluation of the model’s ability to distinguish between normal and anomalous samples across various
+decision thresholds.
+•Pixel-level Metrics: To evaluate the fine-grained defect localization quality, we report AUROC, PRO
+(Per-Region Overlap), and AP. Notably, PRO scales with the overlap ratio of connected components,
+making it more sensitive to the precise coverage of defect regions compared to pixel-wise AUROC, thereby
+treating anomalies of varying sizes with equal importance and avoiding bias from large background
+areas.
+4.2 Implementation Details
+Architecture and Feature Alignment. We utilize CLIP (ViT-L/14) and DINOv3 (ViT-L/16) as the frozen
+backbone encoders. To achieve pixel-level alignment across modalities, we adopt a Resolution Adaptation
+Strategy to counteract the discrepancy in patch sizes. Specifically, given that CLIP uses a patch size of 14, we
+resize the input image to518 ×518for the CLIP branch. Conversely, as DINOv3 operates with a patch size
+of 16, we set the input resolution to592 ×592for the DINO branch. This configuration ensures that the
+feature maps from both encoders share an identical spatial grid size of H′×W′= 37×37, facilitating direct
+interaction without interpolation artifacts.
+To capture hierarchical semantic and structural information, we extract multi-scale features for fusion. We
+select indices {6,12,18,24}from CLIP and {3,6,9,11}from DINOv3 as inputs to the HSVS module. The
+dimension of the semantic manifold is projected to Dc= 768. For the VCPG module, we employ 6 learnable
+prompts, comprising 3 normal prompts and 3 abnormal prompts.
+To ensure fairness, all models employ the same training configuration parameters, with the epoch set to 15
+and the batch size set to 8. All experiments are conducted on a single NVIDIA RTX 4090 GPU (24GB) using
+PyTorch. The initial learning rates are set to5 ×10−4for the prompt embeddings and1 ×10−4for the VAE
+and projection layers, following a cosine decay scheduler. Regarding loss hyper-parameters, we set β= 0.1for
+the KL divergence term, λ1= 1.0for the VAE reconstruction, and λ2= 0.5for the semantic regularization.
+The thresholdξin Eq. 12 is set to 0.85, and the VTAM balancing factorγis set to 0.5.
+4.3 Comparative Experiments
+We compare SSVP with leading ZSAD methods, including: (1) Static Prompting Methods: WinCLIP (Jeong
+et al., 2023), APRIL-GAN (Chen et al., 2023); (2) Dynamic Prompting Methods: AnomalyCLIP (Zhou et al.,
+2023), AdaCLIP (Cao et al., 2024), Bayes-PFL (Qu et al., 2025).
+Quantitative Results. As shown in Table 1, SSVP sets a new SOTA across seven benchmarks. Notably, it
+surpasses Bayes-PFL on MVTec-AD with 93.0% Image-AUROC and 92.2% Pixel-AUROC. SSVP demonstrates
+robustness by dominating complex scenarios (VisA, RSDD, DAGM) and achieving the best pixel-level metrics
+11
+
+--- PAGE BREAK ---
+
+on five datasets. Crucially, the consistent superiority in the PRO metric validates that our HSVS module
+effectively captures fine-grained structural anomalies often missed by other CLIP methods.
+Table 1Comparison with existing state-of-the-art methods in the Industrial domain. The best results are highlighted
+inbold, while the second-best are underlined .
+Metric DatasetWinCLIP APRIL-GAN AnomalyCLIP AdaCLIP Bayes-PFLSSVP (Ours)
+Image-level
+(AUROC, F1-Max,
+AP)MVTec-AD (88.7, 92.6, 94.8) (85.7, 90.2, 93.3) (89.3, 92.4, 96.0) (90.7, 92.6, 96.2 ) (92.0, 93.0, 96.0) (93.0,93.3,96.7)
+VisA (77.6, 78.8, 77.1) (77.9, 78.4, 81.1) (82.0, 80.1, 85.2) (82.6, 81.3, 84.4) (87.1 , 83.4, 89.0) (88.2,85.4,90.4)
+BTAD (83.3, 81.0, 84.1) (74.0, 69.5, 71.2) (89.0, 85.5, 90.8) (91.6 ,90.1, 92.6) (91.4, 88.6,94.2) (94.2, 89.8 , 93.6)
+KSDD2 (93.2, 71.1, 77.4) (90.0, 69.7, 74.1) (91.6, 70.8, 77.4) (95.4, 84.2, 95.6) (97.0,92.1,97.6) (96.9 , 91.8, 97.5)
+RSDD (85.3, 73.5, 65.3) (73.1, 59.7, 50.5) (73.5, 59.0, 55.0) (92.1 , 75.0, 70.8 ) (90.3, 85.6 , 70.1) (98.5,95.2,98.6)
+DAGM (89.6, 86.4, 90.4) (90.4, 86.9, 90.1) (95.6, 93.2, 94.6) (96.5, 94.1, 95.7) (97.7 , 95.7, 97.0) (98.0,96.2,97.4)
+DTD-Syn (93.9, 94.2,98.1) (83.7, 89.3, 93.5) (94.5, 94.5, 97.7) (92.8, 92.2, 97.0) (93.8,95.1, 97.8) (94.0 , 94.6, 98.0)
+Pixel-level
+(AUROC, PRO,
+AP)MVTec-AD (82.5, 64.2, 18.1) (88.9, 43.6, 44.7) (88.9, 81.4, 34.5) (85.5, 40.8, 43.1) (91.9 , 87.8, 48.3) (92.2,89.0,50.0)
+VisA (79.3, 56.2, 4.9) (94.1, 86.4, 25.2) (95.2 , 86.4, 21.0) (94.7, 70.8, 26.4) (93.2, 89.2 , 29.7) (96.2,90.5,30.1)
+BTAD (68.4, 31.8, 10.1) (91.3 , 43.0, 32.9) (90.2, 43.3, 38.2) (87.1, 15.8, 34.3) (90.2, 73.3 , 45.1) (96.5,84.7,51.2)
+KSDD2 (92.4, 90.2, 14.3) (93.4, 50.1, 59.7) (98.7, 91.5, 40.2) (95.1, 68.2, 40.4) (99.6, 97.1 ,72.3) (99.5 ,98.8, 71.5 )
+RSDD (93.8, 74.4, 2.2) (99.4 , 65.2, 27.6) (97.8, 93.2 , 18.7) (93.6, 48.3, 37.1) (99.4 , 92.1, 39.1 ) (99.7,98.7,43.4)
+DAGM (82.5, 55.0, 3.0) (98.6, 42.9, 41.6) (98.1, 95.6 , 28.5) (95.4, 39.1, 45.2 ) (98.7, 94.6, 42.5) (99.4,98.4,50.5)
+DTD-Syn (82.3, 55.2, 11.5) (96.4, 41.5, 63.1) (97.1, 88.2, 52.1) (94.0, 24.7, 52.4) (97.2 , 94.1,69.9) (98.1,94.3, 64.6 )
+Class-wise Performance. Table 2 details results on MVTec-AD, showing that SSVP performs consistently
+across categories. For Carpet, Grid and Leather, it achieves 100% Image-AUROC, indicating that DINOv3’s
+high-frequency details are well preserved and aligned with text semantics. For complex structured objects,
+SSVP also improves notably on Cable and Metal Nut, it outperforms the strongest baseline by 2.0% and 1.6%
+in Pixel-AUROC, respectively. This demonstrates that VCPG effectively directs attention to anomaly-sensitive
+regions, suppressing background noise.
+Table 2Class-wise comparison on MVTec-AD. We report Image-level ( IL) and Pixel-level ( PL) AUROC (%) scores.
+The best results are highlighted inbold, and second-best are underlined .
+Category ClassWinCLIP AnomalyCLIP AdaCLIP Bayes-PFLSSVP
+ILPLILPLILPLILPLILPL
+TexturesCarpet 96.5 94.1 95.2 95.5 98.2 88.5100 99.5 100 99.5
+Grid 89.8 92.3 93.1 93.4 95.5 86.2 99.6 98.5 100 99.1
+Leather 97.2 96.5 97.5 97.2 99.1 92.410099.5 100 99.6
+Tile 94.5 85.4 93.0 91.0 96.8 89.5 99.2 94.2 99.9 94.9
+Wood 95.2 87.2 92.5 90.5 96.2 90.1 99.3 97.7 99.697.5
+ObjectsBottle 95.0 88.5 94.8 93.5 95.5 91.2 95.9 93.8 96.0 94.4
+Cable 81.5 73.2 82.4 75.2 83.6 75.5 81.6 77.1 85.6 77.4
+Capsule 89.2 81.5 90.5 95.8 91.0 88.4 91.5 96.1 96.0 96.2
+Hazelnut 92.4 84.0 94.2 95.5 95.8 92.6 93.0 98.6 98.5 98.8
+Metal Nut 76.8 68.5 77.2 73.5 77.2 71.8 76.1 74.4 78.8 74.8
+Pill 86.5 83.4 87.5 86.5 88.4 85.2 85.6 87.0 89.2 87.4
+Screw 80.2 74.1 81.8 90.8 83.5 82.590.4 98.887.0 98.6
+Toothbrush 82.5 78.2 84.1 91.2 84.8 86.488.9 95.285.5 96.3
+Transistor 77.8 63.5 78.5 68.4 78.0 69.180.269.7 79.1 70.4
+Zipper 95.9 87.1 96.7 94.9 95.5 92.699.398.3 99.3 98.4
+Average88.7 82.5 89.3 88.9 90.7 85.5 92.0 91.9 93.0 92.2
+12
+
+--- PAGE BREAK ---
+
+4.4 Visualization Analysis
+This section visualizes the proposed fusion mechanism’s effectiveness and generalization via SOTA comparisons,
+ablations, and diverse benchmarks.
+Qualitative Anomaly Localization. Figure 3 visualizes the segmentation results on typical industrial samples.
+Compared to AdaCLIP and Bayes-PFL, SSVP generates precise anomaly maps with sharp boundaries. This
+precision is primarily attributed to the HSVS module, which successfully preserves high-frequency structural
+details.
+Input Image
+Bayes-PFLGround Truth
+SSVP(Ours)
+Bottle Capsule Grid
+ Metal Nut
+ Pill
+ Screw
+ Zipper
+AdaCLIP
+Figure 3Qualitative comparison with SOTA methods. Visualization of anomaly heatmaps shows that SSVP produces
+significantly stronger responses on anomalous regions and achieves clearer foreground-background separation compared
+to standard ZSAD methods.
+Effectiveness of Proposed Modules. To further verify the gain from our specific designs, we conduct a direct
+comparison between our full model and the baseline model in Figure 4. As observed, after integrating our
+proposed components (HSVS and VCPG), the segmentation becomes significantly more accurate. Specifically,
+our method effectively suppresses false positives in complex background areas where the baseline often exhibits
+noise. SSVP demonstrates superior sensitivity to small-scale targets, localizing micro-defects that the baseline
+fails to capture. The resulting anomaly maps show a clearer separation between foreground defects and normal
+backgrounds, validating the effectiveness of our semantic-visual alignment strategy.
+We further evaluate the robustness of SSVP on four additional challenging benchmarks: BTAD, DAGM,
+DTD-Synthetic, and KSDD2, as shown in Figure 5. The results verify the strong generalization capability of
+our framework. Specifically, SSVP adapts well to texture-centric scenarios, accurately identifying anomalies
+amidst complex patterns. For object-centric datasets with minute defects, the model maintains high sensitivity
+to small targets. This consistent performance across varying domains confirms that SSVP effectively learns
+transferable visual-semantic features.
+13
+
+--- PAGE BREAK ---
+
+Baseline SSVP
+(a) (b) (c) (d) (a) (b) (c) (d)Figure 4Visual comparison of anomaly localization between Baseline and SSVP. The columns display: (a) Original
+input images; (b) The generated anomaly score maps; (c) Feature maps processed by threshold filtering, where
+ground-truth areas are outlined by green contours; and (d) The ground-truth masks, indicated by red regions.
+14
+
+--- PAGE BREAK ---
+
+BTAD
+DAGM
+DTD
+KSDD
+Figure 5Visualization of ZSAD results across multiple datasets. We visualize sample results from BTAD, DAGM,
+DTD-Synthetic, and KSDD2. The column layout is identical to Figure 4: Original images; Anomaly score maps;
+Thresholded features with GT contours; and GT red masks.
+4.5 Ablation Studies
+We conduct component-wise ablation studies on the MVTec-AD dataset to systematically validate the
+contribution of each module.
+Table 3Component-wise ablation study on MVTec-AD. Baseline denotes Bayes-PFL (Qu et al., 2025). Best results are
+inbold.
+Model HSVS VCPG VTAM I-AUC P-AUC
+A (Baseline)✗ ✗ ✗91.3±0.6 91.2±0.4
+B✓(Concat)✗ ✗90.8±0.3 91.0±0.4
+C✓(ATF)✗ ✗91.4±0.2 92.1±0.3
+D✓ ✓ ✗92.6±0.3 92.5±0.3
+E (Full)✓ ✓ ✓93.0±0.2 92.6±0.4
+We evaluate components in Table 3. Model B’s naive concatenation drops Image-AUROC to 90.8% due to
+misalignment. HSVS in Model C aligns features, boosting Pixel-AUROC to 92.1%. Adding VCPG in Model D
+reaches 92.7% Pixel-AUROC, enhancing fine-grained sensitivity. Full SSVP (Model E) with VTAM calibrates
+scores for 93.0% Image-AUROC and robust performance.
+To quantitatively assess the quality of semantic-visual alignment, we introduce Text-Image Response (TIR)
+and Semantic Consistency Distance (SCD). TIR-FG measures the activation intensity on defect regions:
+TIR FG=1
+|Ωfg|X
+u∈Ω fgCosSim(v u,tabn),(23)
+whereΩ fgdenotes the ground-truth anomaly mask. SCD evaluates the fidelity of learned prompts relative to
+static prototypes:
+SCD=∥t final−tstatic∥2.(24)
+As presented in Table 4, SSVP increases TIR-FG by a relative margin of 28.88% compared to the baseline,
+validating that our dynamic prompts effectively anchor to discriminative visual defects. The SCD metric
+decreases for both normal and abnormal prompts, indicating that our margin-based regularization effectively
+prevents semantic drift and maintains category fidelity.
+15
+
+--- PAGE BREAK ---
+
+Table 4Analysis of semantic-visual alignment. Higher TIR-FG and lower SCD indicate better performance.
+MetricBaseline SSVP Improvement
+(Identity) (Full)∆Value Relative Gain
+TIR-FG(↑) 0.34340.4425+0.099228.88%
+SCD-Normal(↓) 1.28631.2764-0.00990.77%
+SCD-Abnormal(↓) 1.30871.2804-0.02822.16%
+Table 5 evaluates visual backbones. DINOv3 (self-supervised) outperforms reconstruction-based MAE (93.0%
+vs. 90.5% Image-AUROC). Scaling DINOv3 from ViT-Small to ViT-Large yields consistent gains, confirming
+that larger models provide richer structural details for anomaly detection.
+Table 5Impact of visual backbones. Comparisons of pre-training paradigms and model scaling.
+Auxiliary Model Backbone Params (M) I-AUC (%) P-AUC (%)
+MAE (He et al., 2022) ViT-Large 303 90.5 90.1
+DINOv2 (Oquab et al., 2023) ViT-Large 304 91.1 91.0
+DINOv3 (Siméoni et al., 2025) ViT-Large 303 93.0 92.2
+DINOv3 ViT-Small 29 90.9 90.8
+DINOv3 ViT-Base 86 92.2 92.0
+DINOv3 ViT-Large 303 93.0 92.2
+Figure 6 presents t-SNE embeddings on the BTAD dataset. Compared to the disconnected clusters in the
+baseline distribution, SSVP forms a coherent manifold, confirming that our vision-conditioned mechanism
+maintains semantic consistency. The distinct arrangement of prompt groups further ensures both diversity for
+capturing varied anomalies and alignment with class semantics.
+Baseline SSVP[Anomaly Metal][Normal Wood]
+Baseline SSVP
+Figure 6The t-SNE visualization of prompt embeddings on the BTAD dataset. The results reveal that SSVP generates
+a continuous and coherent semantic manifold compared to the fragmented baseline, effectively balancing semantic
+consistency with diversity.
+4.6 Parameter Analysis and Discussion
+To rigorously determine the optimal hyperparameters for SSVP, we employed a step-wise optimization strategy.
+We fix P∗={γ= 0.5, ξ= 0.85}via coordinate-wise search and vary one parameter at a time: γ(Eq.(19))
+balances global semantics against local anomaly evidence; ξ(Eq.(12)) sets the cosine-similarity floor between
+TfinalandT initto control semantic drift.
+16
+
+--- PAGE BREAK ---
+
+/uni00000013/uni00000011/uni00000013 /uni00000013/uni00000011/uni00000015 /uni00000013/uni00000011/uni00000017 /uni00000013/uni00000011/uni00000019 /uni00000013/uni00000011/uni0000001b /uni00000014/uni00000011/uni00000013
+/uni00000025/uni00000044/uni0000004f/uni00000044/uni00000051/uni00000046/uni00000048/uni00000003/uni00000029/uni00000044/uni00000046/uni00000057/uni00000052/uni00000055/uni00000003
+/uni0000001b/uni00000017/uni0000001b/uni00000019/uni0000001b/uni0000001b/uni0000001c/uni00000013/uni0000001c/uni00000015/uni0000001c/uni00000017/uni00000033/uni00000048/uni00000055/uni00000049/uni00000052/uni00000055/uni00000050/uni00000044/uni00000051/uni00000046/uni00000048/uni00000003/uni0000000b/uni00000008/uni0000000c
+/uni0000002c/uni00000010/uni00000024/uni00000038/uni00000035/uni00000032/uni00000026 /uni00000033/uni00000010/uni00000024/uni00000038/uni00000035/uni00000032/uni00000026 /uni00000033/uni00000010/uni00000033/uni00000035/uni00000032Figure 7Analysis of the balancing factorγ.
+/uni00000013/uni00000011/uni0000001a/uni00000013 /uni00000013/uni00000011/uni0000001a/uni00000018 /uni00000013/uni00000011/uni0000001b/uni00000013 /uni00000013/uni00000011/uni0000001b/uni00000018 /uni00000013/uni00000011/uni0000001c/uni00000013 /uni00000013/uni00000011/uni0000001c/uni00000018
+/uni00000035/uni00000048/uni0000004a/uni00000058/uni0000004f/uni00000044/uni00000055/uni0000004c/uni0000005d/uni00000044/uni00000057/uni0000004c/uni00000052/uni00000051/uni00000003/uni00000037/uni0000004b/uni00000055/uni00000048/uni00000056/uni0000004b/uni00000052/uni0000004f/uni00000047/uni00000003
+/uni0000001b/uni00000019/uni0000001b/uni0000001b/uni0000001c/uni00000013/uni0000001c/uni00000015/uni0000001c/uni00000017/uni00000033/uni00000048/uni00000055/uni00000049/uni00000052/uni00000055/uni00000050/uni00000044/uni00000051/uni00000046/uni00000048/uni00000003/uni0000000b/uni00000008/uni0000000c
+/uni0000002c/uni00000010/uni00000024/uni00000038/uni00000035/uni00000032/uni00000026 /uni00000033/uni00000010/uni00000024/uni00000038/uni00000035/uni00000032/uni00000026 /uni00000033/uni00000010/uni00000033/uni00000035/uni00000032 Figure 8Analysis of the margin thresholdξ.
+Figures 7 and 8 illustrate the sensitivity of the balance factor γand margin threshold ξ. Performance peaks
+atγ= 0.5, which optimally balances defect detection with noise. ξ= 0.85effectively regularizes semantics,
+preventing drift while maintaining sufficient diversity to capture diverse anomalies.
+5 Conclusion
+In this paper, we presented SSVP, a novel framework that bridges the granularity gap in zero-shot industrial
+anomaly detection by establishing a deep synergy between CLIP’s semantic generalization and DINOv3’s
+structural discrimination. By combining Hierarchical Semantic-Visual Synergy (HSVS), Vision-Conditioned
+Prompt Generator (VCPG), and locally calibrated scoring (VTAM), our method transforms static semantic
+matching into an adaptive, visually grounded detection process. Extensive experiments across seven diverse
+benchmarks demonstrate that SSVP sets a new state-of-the-art, effectively handling both texture-centric and
+object-centric defects without target-domain supervision. Despite these advancements, a primary limitation
+lies in the computational overhead incurred by the dual-backbone architecture and the iterative generative
+process, which restricts inference speed for real-time edge deployment. Future work will focus on two directions:
+(1) investigating knowledge distillation techniques to compress the synergistic knowledge into a lightweight
+unified network; (2) exploring test-time adaptation strategies to further refine the visual-semantic alignment
+on unlabelled target streams.
+References
+Mouïn Ben Ammar, Arturo Mendoza, Nacim Belkhir, Antoine Manzanera, and Gianni Franchi. Foundation models
+and transformers for anomaly detection: A survey.Information Fusion, page 103517, 2025.
+Hongjun An, Wenhan Hu, Sida Huang, Siqi Huang, Ruanjun Li, Yuanzhi Liang, Jiawei Shao, Yiliang Song, Zihan
+Wang, Cheng Yuan, Chi Zhang, Hongyuan Zhang, Wenhao Zhuang, and Xuelong Li. Ai flow: Perspectives, scenarios,
+and approaches.arXiv preprint arXiv:2506.12479, 2025.
+Toshimichi Aota, Lloyd Teh Tzer Tong, and Takayuki Okatani. Zero-shot versus many-shot: Unsupervised texture
+anomaly detection. InProceedings of the IEEE/CVF Winter Conference on Applications of Computer Vision, pages
+5564–5572, 2023.
+Kilian Batzner, Lars Heckler, and Rebecca König. Efficientad: Accurate visual anomaly detection at millisecond-level
+latencies. InProceedings of the IEEE/CVF winter conference on applications of computer vision, pages 128–138,
+2024.
+Paul Bergmann, Michael Fauser, David Sattlegger, and Carsten Steger. Mvtec ad–a comprehensive real-world dataset
+for unsupervised anomaly detection. InProceedings of the IEEE/CVF conference on computer vision and pattern
+recognition, pages 9592–9600, 2019.
+17
+
+--- PAGE BREAK ---
+
+Jakob Božič, Domen Tabernik, and Danijel Skočaj. Mixed supervision for surface-defect detection: From weakly to
+fully supervised learning.Computers in Industry, 129:103459, 2021.
+Yunkang Cao, Jiangning Zhang, Luca Frittoli, Yuqi Cheng, Weiming Shen, and Giacomo Boracchi.AdaCLIP: Adapting
+CLIP with Hybrid Learnable Prompts for Zero-Shot Anomaly Detection, page 55–72. Springer Nature Switzerland,
+September 2024. ISBN 9783031727610.
+Yunkang Cao, Xiaohao Xu, Yuqi Cheng, Chen Sun, Zongwei Du, Liang Gao, and Weiming Shen. Personalizing
+vision-language models with hybrid prompts for zero-shot anomaly detection.IEEE Transactions on Cybernetics,
+2025.
+Xuhai Chen, Yue Han, and Jiangning Zhang. April-gan: A zero-/few-shot anomaly classification and segmentation
+method for cvpr 2023 vand workshop challenge tracks 1&2: 1st place on zero-shot ad and 4th place on few-shot ad.
+arXiv preprint arXiv:2305.17382, 2023.
+Zhi Chen, Xin Yu, Xiaohui Tao, Yan Li, and Zi Huang. Cluster-aware prompt ensemble learning for few-shot
+vision–language model adaptation.Pattern Recognition, page 112596, 2025.
+Zhiling Chen and Farhad Imani. A multi-expert framework for enhancing multimodal large language models in
+industrial anomaly detection.Pattern Recognition, page 112752, 2025.
+Guowei Dai, Chaoyu Wang, Duwei Dai, Qingfeng Tang, Yi Zhang, and Hu Chen. Interpretable breast cancer
+identification by multi-view synergistic feature fusion interaction in dense breast tissue.Information Fusion, 125:
+103446, 2026.
+Simon Damm, Mike Laszkiewicz, Johannes Lederer, and Asja Fischer. Anomalydino: Boosting patch-based few-shot
+anomaly detection with dinov2. In2025 IEEE/CVF Winter Conference on Applications of Computer Vision
+(WACV), pages 1319–1329. IEEE, 2025.
+Hanqiu Deng and Xingyu Li. Anomaly detection via reverse distillation from one-class embedding. InProceedings of
+the IEEE/CVF conference on computer vision and pattern recognition, pages 9737–9746, 2022.
+Mohammad Mahdi Derakhshani, Enrique Sanchez, Adrian Bulat, Victor G Turrisi da Costa, Cees GM Snoek, Georgios
+Tzimiropoulos, andBrais Martinez. Bayesian promptlearningfor image-languagemodelgeneralization. InProceedings
+of the IEEE/CVF International Conference on Computer Vision, pages 15237–15246, 2023.
+Deutsche Arbeitsgemeinschaft für Mustererkennung. Weakly supervised learning for industrial optical inspection.
+DAGM 2007 benchmark dataset, 2007.
+Yansheng Gao, Zixi Zhu, and Shengsheng Wang. Mixture of coarse and fine-grained prompt tuning for vision-language
+model.Pattern Recognition, 170:112074, 2026.
+Zhaopeng Gu, Bingke Zhu, Guibo Zhu, Yingying Chen, Hao Li, Ming Tang, and Jinqiao Wang. Filo: Zero-shot anomaly
+detection by fine-grained description and high-quality localization. InProceedings of the 32nd ACM International
+Conference on Multimedia, pages 2041–2049, 2024.
+Jianfang He, Min Cao, Silong Peng, and Qiong Xie. Rareclip: Rarity-aware online zero-shot industrial anomaly
+detection. InProceedings of the IEEE/CVF International Conference on Computer Vision, pages 24478–24487,
+2025.
+Kaiming He, Xinlei Chen, Saining Xie, Yanghao Li, Piotr Dollár, and Ross Girshick. Masked autoencoders are scalable
+vision learners. InProceedings of the IEEE/CVF conference on computer vision and pattern recognition, pages
+16000–16009, 2022.
+Ronglong Hu, Jizheng Yi, Xiaoyao Li, Aibin Chen, and Guangjie Han. Efficient industrial anomaly detection via
+cross-scale distillation with enhanced feature compression.Pattern Recognition, page 112761, 2025.
+Jongheon Jeong, Yang Zou, Taewan Kim, Dongqing Zhang, Avinash Ravichandran, and Onkar Dabeer. Winclip:
+Zero-/few-shot anomaly classification and segmentation. InProceedings of the IEEE/CVF Conference on Computer
+Vision and Pattern Recognition, pages 19606–19616, 2023.
+Er Jin, Qihui Feng, Yongli Mou, Gerhard Lakemeyer, Stefan Decker, Oliver Simons, and Johannes Stegmaier. Logicad:
+Explainable anomaly detection via vlm-based text feature extraction. InProceedings of the AAAI Conference on
+Artificial Intelligence, volume 39, pages 4129–4137, 2025.
+Diederik P Kingma and Max Welling. Auto-encoding variational bayes.arXiv preprint arXiv:1312.6114, 2013.
+18
+
+--- PAGE BREAK ---
+
+Hao Li, Changyao Tian, Jie Shao, Xizhou Zhu, Zhaokai Wang, Jinguo Zhu, Wenhan Dou, Xiaogang Wang, Hongsheng
+Li, Lewei Lu, et al. Synergen-vl: Towards synergistic image understanding and generation with vision experts and
+token folding. InProceedings of the Computer Vision and Pattern Recognition Conference, pages 29767–29779, 2025.
+Xurui Li, Ziming Huang, Feng Xue, and Yu Zhou. Musc: Zero-shot industrial anomaly classification and segmentation
+with mutual scoring of the unlabeled images. InThe Twelfth International Conference on Learning Representations,
+2024.
+Hao Liu, Xinghua Jiang, Xin Li, Zhimin Bao, Deqiang Jiang, and Bo Ren. Nommer: Nominate synergistic context in
+vision transformer for visual recognition. InProceedings of the IEEE/CVF Conference on Computer Vision and
+Pattern Recognition, pages 12073–12082, 2022.
+Jiaqi Liu, Guoyang Xie, Jinbao Wang, Shangnian Li, Chengjie Wang, Feng Zheng, and Yaochu Jin. Deep industrial
+image anomaly detection: A survey.Machine Intelligence Research, 21(1):104–135, 2024.
+Zhikang Liu, Yiming Zhou, Yuansheng Xu, and Zilei Wang. Simplenet: A simple network for image anomaly detection
+and localization. InProceedings of the IEEE/CVF conference on computer vision and pattern recognition, pages
+20402–20411, 2023.
+Yong Luo, Yonggang Wen, Han Hu, Bo Du, Ling-Yu Duan, and Dacheng Tao. Transfer metric learning: algorithms,
+applications and outlooks.Vicinagearth, 1(1):2, 2024.
+Xiaotian Lv, Yue Zhao, Hanlong Yin, Yifei Chen, and Jianxing Liu. Msg-clip: Enhancing clip’s ability to learn
+fine-grained structural associations through multi-modal scene graph alignment.Pattern Recognition, page 112794,
+2025.
+Pankaj Mishra, Riccardo Verk, Daniele Fornasier, Claudio Piciarelli, and Gian Luca Foresti. Vt-adl: A vision
+transformer network for image anomaly detection and localization. In2021 IEEE 30th International Symposium on
+Industrial Electronics (ISIE), pages 01–06. IEEE, 2021.
+Maxime Oquab, Timothée Darcet, Théo Moutakanni, Huy Vo, Marc Szafraniec, Vasil Khalidov, Pierre Fernandez,
+Daniel Haziza, Francisco Massa, Alaaeldin El-Nouby, et al. Dinov2: Learning robust visual features without
+supervision.arXiv preprint arXiv:2304.07193, 2023.
+Zhen Qu, Xian Tao, Xinyi Gong, Shichen Qu, Qiyu Chen, Zhengtao Zhang, Xingang Wang, and Guiguang Ding.
+Bayesian prompt flow learning for zero-shot anomaly detection. InProceedings of the Computer Vision and Pattern
+Recognition Conference, pages 30398–30408, 2025.
+Alec Radford, Jong Wook Kim, Chris Hallacy, Aditya Ramesh, Gabriel Goh, Sandhini Agarwal, Girish Sastry, Amanda
+Askell, Pamela Mishkin, Jack Clark, et al. Learning transferable visual models from natural language supervision.
+InInternational conference on machine learning, pages 8748–8763. PmLR, 2021.
+Wahyu Rahmaniar and Kenji Suzuki. Multi-ad: cross-domain unsupervised anomaly detection for medical and
+industrial applications.Pattern Recognition, page 112486, 2025.
+Abha Kiran Rajpoot and Gaurav Agrawal. Synergistic fusion: Vision-language models in advancing autonomous
+driving and intelligent transportation systems. InBuilding Embodied AI Systems: The Agents, the Architecture
+Principles, Challenges, and Application Domains, pages 205–221. Springer, 2025.
+Karsten Roth, Latha Pemula, Joaquin Zepeda, Bernhard Schölkopf, Thomas Brox, and Peter Gehler. Towards total
+recall in industrial anomaly detection. InProceedings of the IEEE/CVF conference on computer vision and pattern
+recognition, pages 14318–14328, 2022.
+Oriane Siméoni, Huy V Vo, Maximilian Seitzer, Federico Baldassarre, Maxime Oquab, Cijo Jose, Vasil Khalidov, Marc
+Szafraniec, Seungeun Yi, Michaël Ramamonjisoa, et al. Dinov3.arXiv preprint arXiv:2508.10104, 2025.
+Mengsheng Wang, Lun Xie, Xiaolan Peng, and Xinheng Wang. Mdcm: A multi-granularity disentanglement and
+cross-modal synergy-based model for sentiment analysis.Pattern Recognition, page 112898, 2025.
+Jiacong Xu, Shao-Yuan Lo, Bardia Safaei, Vishal M Patel, and Isht Dwivedi. Towards zero-shot anomaly detection and
+reasoning with multimodal large language models. InProceedings of the Computer Vision and Pattern Recognition
+Conference, pages 20370–20382, 2025.
+Minghui Yang, Jing Liu, Zhiwei Yang, and Zhaoyang Wu. Slsg: Industrial image anomaly detection with improved
+feature embeddings and one-class classification.Pattern Recognition, 156:110862, 2024.
+Lihao Ye, Ke Zhang, and Bin Jiang. Synergistic feature fusion with deep convolutional gan for fault diagnosis in
+imbalanced rotating machinery.IEEE Transactions on Industrial Informatics, 2024.
+19
+
+--- PAGE BREAK ---
+
+Haomin Yu, Qingyong Li, Yunqiang Tan, Jinrui Gan, Jianzhu Wang, Yangli-ao Geng, and Lei Jia. A coarse-to-fine
+model for rail surface defect detection.IEEE Transactions on Instrumentation and Measurement, 68(3):656–666,
+2018.
+Jiawei Yu, Ye Zheng, Xiang Wang, Wei Li, Yushuang Wu, Rui Zhao, and Liwei Wu. Fastflow: Unsupervised anomaly
+detection and localization via 2d normalizing flows.arXiv preprint arXiv:2111.07677, 2021.
+Jiajun Zhang, Zhouwang Yang, and Yanzhi Song. Dc-ad: A divide-and-conquer method for few-shot anomaly detection.
+Pattern Recognition, 162:111360, 2025.
+Jiayin Zhou, Waikeung Wong, and Fangjian Liao. One-shot unsupervised industrial anomaly detection: Enhanced
+performance under extreme data scarcity.Pattern Recognition, page 112759, 2025.
+Kaiyang Zhou, Jingkang Yang, Chen Change Loy, and Ziwei Liu. Conditional prompt learning for vision-language
+models. InProceedings of the IEEE/CVF conference on computer vision and pattern recognition, pages 16816–16825,
+2022.
+Qihang Zhou, Guansong Pang, Yu Tian, Shibo He, and Jiming Chen. Anomalyclip: Object-agnostic prompt learning
+for zero-shot anomaly detection.arXiv preprint arXiv:2310.18961, 2023.
+Jiawen Zhu, Yew-Soon Ong, Chunhua Shen, and Guansong Pang. Fine-grained abnormality prompt learning for
+zero-shot anomaly detection. InProceedings of the IEEE/CVF International Conference on Computer Vision, pages
+22241–22251, 2025.
+Yang Zou, Jongheon Jeong, Latha Pemula, Dongqing Zhang, and Onkar Dabeer. Spot-the-difference self-supervised
+pre-training for anomaly detection and segmentation. InEuropean conference on computer vision, pages 392–408.
+Springer, 2022.
+20
