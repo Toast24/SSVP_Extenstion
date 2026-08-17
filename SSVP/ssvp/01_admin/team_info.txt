@@ -1,10 +1,10 @@
-Team Name: 
-Project Title: 
-Topic Number/Name: 
-Faculty Mentor: 
-TA Mentor: 
+Team Number: 15 
+Project Title: SSVP: Robust Industrial Anomaly Segmentation and Captioning
+Topic Name: Zero-Shot Visual Anomaly Detection for Small-Scale Manufacturing 
+Faculty Mentor: Dr. Pratik Narang
+TA Mentor: Ghufran Alam Siddiqui
 
-Member 1: Name | Roll No | ID | Email
-Member 2: Name | Roll No | ID | Email
-Member 3: Name | Roll No | ID | Email
-Member 4: Name | Roll No | ID | Email
+Member 1: Neha Gujjari | 2023A7PS0011P | f20230011@pilani.bits-pilani.ac.in
+Member 2: Vivek Gunuganti | 2023A4PS0395P | f20230395@pilani.bits-pilani.ac.in
+Member 3: Kedar Athrey | 2023A7PS0550P | f20230550@pilani.bits-pilani.ac.in
+Member 4: Siddhant Mishra | 2023A8PS0720P | f20230720@pilani.bits-pilani.ac.in

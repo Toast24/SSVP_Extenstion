@@ -1,0 +1,144 @@
+{
+  "categories": [
+    "cable"
+  ],
+  "num_images": 10,
+  "target_mode": "spatial",
+  "baseline": {
+    "captions": [
+      "industrial inspection photo of three tomatoes on a plate",
+      "industrial inspection photo of a black plate with red and yellow circles",
+      "industrial inspection photo of three tomatoes on a plate",
+      "industrial inspection photo of three tomatoes on a plate",
+      "industrial inspection photo of three spheres in a circle",
+      "industrial inspection photo of a red and black circular object",
+      "industrial inspection photo of three tomatoes on a plate",
+      "industrial inspection photo of three spheres on a black plate",
+      "industrial inspection photo of a red and yellow circular object",
+      "industrial inspection photo of three tomatoes on a black plate"
+    ],
+    "references": [
+      "no defect",
+      "defect at right of type cable swap",
+      "no defect",
+      "no defect",
+      "no defect",
+      "no defect",
+      "no defect",
+      "defect at lower of type cut outer insulation",
+      "no defect",
+      "defect at center of type cable swap"
+    ],
+    "bertscore": {
+      "precision": 0.8253013491630554,
+      "recall": 0.8339163064956665,
+      "f1": 0.8294439315795898,
+      "per_sample_f1": [
+        0.827447772026062,
+        0.8254820704460144,
+        0.827447772026062,
+        0.827447772026062,
+        0.8394711017608643,
+        0.8311398029327393,
+        0.827447772026062,
+        0.8292427062988281,
+        0.8264012932777405,
+        0.8329108953475952
+      ]
+    },
+    "defect_matches": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "spatial_matches": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "nli_entailment": null
+  },
+  "spatial_finetuned": {
+    "captions": [
+      "industrial inspection photo of center of type missing cable",
+      "industrial inspection photo of center of type missing cable",
+      "industrial inspection photo of center of type cable swap",
+      "industrial inspection photo of center of type missing cable",
+      "industrial inspection photo of center of type missing cable",
+      "industrial inspection photo of center of type missing cable",
+      "industrial inspection photo of center of type missing cable",
+      "industrial inspection photo of center of type missing cable",
+      "industrial inspection photo of center of type cable swap",
+      "industrial inspection photo of center of type missing cable"
+    ],
+    "references": [
+      "no defect",
+      "defect at right of type cable swap",
+      "no defect",
+      "no defect",
+      "no defect",
+      "no defect",
+      "no defect",
+      "defect at lower of type cut outer insulation",
+      "no defect",
+      "defect at center of type cable swap"
+    ],
+    "bertscore": {
+      "precision": 0.8227138519287109,
+      "recall": 0.8498867154121399,
+      "f1": 0.8360034823417664,
+      "per_sample_f1": [
+        0.8194743990898132,
+        0.8667651414871216,
+        0.8187130689620972,
+        0.8194743990898132,
+        0.8194743990898132,
+        0.8194743990898132,
+        0.8194743990898132,
+        0.8604694604873657,
+        0.8187130689620972,
+        0.898002564907074
+      ]
+    },
+    "defect_matches": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "spatial_matches": [
+      1,
+      0,
+      1,
+      1,
+      1,
+      1,
+      1,
+      0,
+      1,
+      1
+    ],
+    "nli_entailment": null
+  },
+  "delta_f1": 0.006559550762176514
+}

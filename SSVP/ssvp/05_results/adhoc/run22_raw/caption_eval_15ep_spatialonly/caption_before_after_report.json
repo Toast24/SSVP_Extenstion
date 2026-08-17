@@ -1,0 +1,144 @@
+{
+  "categories": [
+    "cable"
+  ],
+  "num_images": 10,
+  "target_mode": "spatial",
+  "baseline": {
+    "captions": [
+      "three tomatoes in a black bowl on a table",
+      "a black plate with a red and yellow design",
+      "a plate with three tomatoes on it",
+      "three tomatoes on a black plate",
+      "a black plate with a red and yellow design",
+      "a black plate with a red and yellow design on it",
+      "a plate of food on a red and black background",
+      "a black plate with three circles on it",
+      "a black plate with three pieces of fruit on it",
+      "a plate with three tomatoes on top of it"
+    ],
+    "references": [
+      "no anomaly",
+      "anomaly at right",
+      "no anomaly",
+      "no anomaly",
+      "no anomaly",
+      "no anomaly",
+      "no anomaly",
+      "anomaly at lower",
+      "no anomaly",
+      "anomaly at center"
+    ],
+    "bertscore": {
+      "precision": 0.8344457745552063,
+      "recall": 0.8812050819396973,
+      "f1": 0.8571136593818665,
+      "per_sample_f1": [
+        0.8551293611526489,
+        0.8669293522834778,
+        0.8607566952705383,
+        0.860764741897583,
+        0.8551108837127686,
+        0.8530368208885193,
+        0.8533692359924316,
+        0.8284884095191956,
+        0.8606117367744446,
+        0.8769397735595703
+      ]
+    },
+    "anomaly_matches": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "spatial_matches": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "nli_entailment": null
+  },
+  "spatial_finetuned": {
+    "captions": [
+      "anomaly at center",
+      "anomaly at center",
+      "anomaly at center",
+      "anomaly at center",
+      "anomaly at center",
+      "anomaly at center",
+      "anomaly at center",
+      "anomaly at center",
+      "anomaly at center",
+      "anomaly at center"
+    ],
+    "references": [
+      "no anomaly",
+      "anomaly at right",
+      "no anomaly",
+      "no anomaly",
+      "no anomaly",
+      "no anomaly",
+      "no anomaly",
+      "anomaly at lower",
+      "no anomaly",
+      "anomaly at center"
+    ],
+    "bertscore": {
+      "precision": 0.9180086255073547,
+      "recall": 0.934588611125946,
+      "f1": 0.926186203956604,
+      "per_sample_f1": [
+        0.9115208387374878,
+        0.9617865085601807,
+        0.9115208387374878,
+        0.9115208387374878,
+        0.9115208387374878,
+        0.9115208387374878,
+        0.9115208387374878,
+        0.919430136680603,
+        0.9115208387374878,
+        1.0
+      ]
+    },
+    "anomaly_matches": [
+      0,
+      1,
+      0,
+      0,
+      0,
+      0,
+      0,
+      1,
+      0,
+      1
+    ],
+    "spatial_matches": [
+      1,
+      0,
+      1,
+      1,
+      1,
+      1,
+      1,
+      0,
+      1,
+      1
+    ],
+    "nli_entailment": null
+  },
+  "delta_f1": 0.06907254457473755
+}

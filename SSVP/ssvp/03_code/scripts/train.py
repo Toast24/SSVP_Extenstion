@@ -685,6 +685,17 @@ def main():
     print(f"Training samples: {len(train_loader.dataset)}")
     print(f"Validation samples (from train split): {len(val_loader.dataset)}")
 
+    from data.mvtec import log_dataset_statistics
+    train_stats = log_dataset_statistics(train_loader.dataset, "Train Split")
+    val_stats = log_dataset_statistics(val_loader.dataset, "Validation Split")
+
+    # Save to output_dir for P-PRO diagnostics
+    import json
+    stats_path = os.path.join(args.output_dir, "dataset_statistics.json")
+    os.makedirs(args.output_dir, exist_ok=True)
+    with open(stats_path, "w") as f:
+        json.dump({"train": train_stats, "val": val_stats}, f, indent=2)
+
     # ── Model ──
     print("\nInitializing SSVP model...")
     model = SSVP(config).to(device)
@@ -850,6 +861,12 @@ def main():
         "monitor": "val_loss",
         "metrics_file": metrics_path,
         "val_visualizations_dir": os.path.join(args.output_dir, "val_visualizations"),
+        "dataset_statistics": {
+            "train_samples": len(train_loader.dataset),
+            "val_samples": len(val_loader.dataset),
+            "train_stats": train_stats,
+            "val_stats": val_stats,
+        },
     }
     with open(summary_path, "w", encoding="utf-8") as f:
         json.dump(summary, f, indent=2)
