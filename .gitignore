@@ -33,3 +33,5 @@ outputs/
 
 # REFAC ad-hoc outputs at workspace level
 SSVPREFAC/runs/
+
+**/.claude/
